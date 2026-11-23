@@ -1,0 +1,28 @@
+2026-11-23T18:16:06Z warm-up: HTTP 200, finish length, 32 tokens (32 reasoning), 44.91 tok/s
+2026-11-23T18:16:07Z prose greedy run 1: HTTP 200, finish length, 2048 tokens (2048 reasoning), 24.02 tok/s
+2026-11-23T18:17:33Z prose default run 1: HTTP 200, finish length, 2048 tokens (2048 reasoning), 21.41 tok/s
+2026-11-23T18:19:09Z prose greedy run 2: HTTP 200, finish length, 2048 tokens (2048 reasoning), 23.91 tok/s
+2026-11-23T18:20:35Z prose default run 2: HTTP 200, finish length, 2048 tokens (2048 reasoning), 19.87 tok/s
+2026-11-23T18:22:18Z prose greedy run 3: HTTP 200, finish length, 2048 tokens (2048 reasoning), 23.91 tok/s
+2026-11-23T18:23:44Z prose default run 3: HTTP 200, finish length, 2048 tokens (2048 reasoning), 20.89 tok/s
+2026-11-23T18:25:23Z code greedy run 1: HTTP 200, finish length, 2048 tokens (2048 reasoning), 25.94 tok/s
+2026-11-23T18:26:42Z code default run 1: HTTP 200, finish length, 2048 tokens (2048 reasoning), 23.76 tok/s
+2026-11-23T18:28:09Z code greedy run 2: HTTP 200, finish length, 2048 tokens (2048 reasoning), 25.93 tok/s
+2026-11-23T18:29:28Z code default run 2: HTTP 200, finish length, 2048 tokens (2048 reasoning), 22.21 tok/s
+2026-11-23T18:31:01Z code greedy run 3: HTTP 200, finish length, 2048 tokens (2048 reasoning), 25.94 tok/s
+2026-11-23T18:32:20Z code default run 3: HTTP 200, finish length, 2048 tokens (2048 reasoning), 19.45 tok/s
+2026-11-23T18:34:06Z prose greedy, thinking off run 1: HTTP 200, finish stop, 767 tokens (0 reasoning), 21.91 tok/s
+2026-11-23T18:34:42Z prose default, thinking off run 1: HTTP 200, finish stop, 613 tokens (0 reasoning), 21.41 tok/s
+2026-11-23T18:35:11Z prose greedy, thinking off run 2: HTTP 200, finish stop, 767 tokens (0 reasoning), 21.91 tok/s
+2026-11-23T18:35:46Z prose default, thinking off run 2: HTTP 200, finish stop, 708 tokens (0 reasoning), 17.94 tok/s
+2026-11-23T18:36:26Z prose greedy, thinking off run 3: HTTP 200, finish stop, 767 tokens (0 reasoning), 21.89 tok/s
+2026-11-23T18:37:02Z prose default, thinking off run 3: HTTP 200, finish stop, 628 tokens (0 reasoning), 21.04 tok/s
+2026-11-23T18:37:32Z code greedy, thinking off run 1: HTTP 200, finish length, 2048 tokens (0 reasoning), 35.63 tok/s
+2026-11-23T18:38:30Z code default, thinking off run 1: HTTP 200, finish length, 2048 tokens (0 reasoning), 35.82 tok/s
+2026-11-23T18:39:28Z code greedy, thinking off run 2: HTTP 200, finish length, 2048 tokens (0 reasoning), 35.65 tok/s
+2026-11-23T18:40:26Z code default, thinking off run 2: HTTP 200, finish length, 2048 tokens (0 reasoning), 36.4 tok/s
+2026-11-23T18:41:22Z code greedy, thinking off run 3: HTTP 200, finish length, 2048 tokens (0 reasoning), 35.71 tok/s
+2026-11-23T18:42:20Z code default, thinking off run 3: HTTP 200, finish length, 2048 tokens (0 reasoning), 35.19 tok/s
+2026-11-23T18:43:19Z finding 6, budget: HTTP 200, finish length, 8192 tokens (4097 reasoning), 22.45 tok/s
+2026-11-23T18:49:25Z finding 6, none: HTTP 200, finish length, 8192 tokens (8192 reasoning), 21.36 tok/s
+2026-11-23T18:55:49Z wrote ~/hy4/fix07-out/sampling_check.json; all requests answered: True

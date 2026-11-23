@@ -15614,10 +15614,10 @@ index b326dd4305bc8e13c16fcf29aeec7307595fac9a..70e9fc0ec1ddc779c113b17701105372
  }
 diff --git a/zig/src/families/hy4/boundary.zig b/zig/src/families/hy4/boundary.zig
 new file mode 100644
-index 0000000000000000000000000000000000000000..562f198e60644d49e17830eae92bcc8daa259566
+index 0000000000000000000000000000000000000000..b4b0a80f35a5c89a8e8a4543b2010d85335823a9
 --- /dev/null
 +++ b/zig/src/families/hy4/boundary.zig
-@@ -0,0 +1,597 @@
+@@ -0,0 +1,599 @@
 +//! Four-rank process session (`TpSession`) for Full Hy4 (`hy_v4_vl` / `hy_v4`) over `cuda.hy4_tp.Boundary`.
 +//!
 +//! Coordinates bounded TCP bootstrap (`tp.Bootstrap`), executable SHA-256 + NCCL version agreement via
@@ -15835,6 +15835,7 @@ index 0000000000000000000000000000000000000000..562f198e60644d49e17830eae92bcc8d
 +    load_timeout_ns: u64,
 +    plan_link: ?tp.planlink.PlanLink = null,
 +    plant_pack_mismatch_rank: ?usize = null,
++    vocab_stage: std.ArrayList(f32) = .empty,
 +
 +    pub fn open(io: std.Io, opts: ConnectOptions) !TpSession {
 +        return openOpt(io, null, opts);
@@ -16027,10 +16028,9 @@ index 0000000000000000000000000000000000000000..562f198e60644d49e17830eae92bcc8d
 +        return greedy.gatherTop2(&self.bootstrap, local[0..rows], vocab_pad, vocab_full, out);
 +    }
 +
-+    pub fn gatherVocabLogits(
-+        self: *TpSession, gpa: std.mem.Allocator, stream: cuda.Stream, local_f32: []const f32,
-+        rows: usize, vocab_stride: usize, vocab_full: usize, out_full: []f32,
-+    ) !void {
++    pub const gatherVocabDevice = @import("vocab_gather.zig").gatherDevice;
++
++    pub fn gatherVocabLogits(self: *TpSession, gpa: std.mem.Allocator, stream: cuda.Stream, local_f32: []const f32, rows: usize, vocab_stride: usize, vocab_full: usize, out_full: []f32) !void {
 +        if (local_f32.len != rows * vocab_stride) return error.BadHy4VocabGather;
 +        try self.boundary.finish(stream);
 +        try gatherVocabOnBootstrap(&self.bootstrap, gpa, local_f32, rows, vocab_stride, vocab_full, out_full);
@@ -16044,6 +16044,7 @@ index 0000000000000000000000000000000000000000..562f198e60644d49e17830eae92bcc8d
 +    }
 +
 +    pub fn abortAndClose(self: *TpSession) void {
++        self.vocab_stage.deinit(std.heap.c_allocator);
 +        if (self.plan_link) |*pl| pl.close();
 +        self.plan_link = null;
 +        self.boundary.abort();
@@ -16053,6 +16054,7 @@ index 0000000000000000000000000000000000000000..562f198e60644d49e17830eae92bcc8d
 +    }
 +
 +    pub fn close(self: *TpSession) void {
++        self.vocab_stage.deinit(std.heap.c_allocator);
 +        if (self.plan_link) |*pl| pl.close();
 +        self.plan_link = null;
 +        self.boundary.close();
@@ -17069,10 +17071,10 @@ index 0000000000000000000000000000000000000000..36990b788a74650fdf5f620bb9048540
 +}
 diff --git a/zig/src/families/hy4/cuda_backend.zig b/zig/src/families/hy4/cuda_backend.zig
 new file mode 100644
-index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834eff772c0f2
+index 0000000000000000000000000000000000000000..10e207aa7465a4ed2fc779ce71bf8bf396cbfecc
 --- /dev/null
 +++ b/zig/src/families/hy4/cuda_backend.zig
-@@ -0,0 +1,598 @@
+@@ -0,0 +1,560 @@
 +//! Full Hy4 (`hy_v4_vl` / `hy_v4`) behind `lanes.backend.Backend` on 1 rank (with optional DFly2 `--drafter`) or TP=4.
 +//! Steps prompts in chunks, decodes/verifies `1..16`-row chains over lossless BF16 `KvPool`, and replicates rounds via `PlanLink`.
 +const std = @import("std");
@@ -17087,6 +17089,7 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +const draft_policy = @import("draft_policy.zig");
 +const repeat_stable = @import("repeat_stable.zig");
 +const vision_runtime = @import("vision_runtime.zig");
++const vocab_gather = @import("vocab_gather.zig");
 +
 +const be = lanes.backend;
 +const Stream = lanes.Stream;
@@ -17114,66 +17117,8 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +    return prompt <= physical and reply <= physical - prompt and reserve <= physical - prompt - reply;
 +}
 +
-+const Cand = struct {
-+    id: u32, logit: f32, prob: f32 = 0,
-+    fn more(_: void, a: Cand, b: Cand) bool { return if (a.logit != b.logit) a.logit > b.logit else a.id < b.id; }
-+};
-+
-+pub fn sampleRowF32(gpa: std.mem.Allocator, logits: []const f32, rule: cuda.sample.Rule, pos: u64) !u32 {
-+    if (logits.len == 0) return error.EmptyVocab;
-+    var max_logit: f32 = -std.math.inf(f32);
-+    for (logits) |v| {
-+        if (!std.math.isFinite(v)) return error.NonFiniteLogits;
-+        if (v > max_logit) max_logit = v;
-+    }
-+    const k_lim: usize = if (rule.top_k > 0) @as(usize, @min(@as(usize, rule.top_k), logits.len)) else logits.len;
-+    var cands: std.ArrayList(Cand) = .empty;
-+    defer cands.deinit(gpa);
-+    const floor = max_logit - rule.near / @max(rule.inv_t, 1e-6);
-+    for (logits, 0..) |v, id| if (v >= floor) try cands.append(gpa, .{ .id = @intCast(id), .logit = v });
-+    if (cands.items.len == 0) return resident.argmaxF32(logits);
-+    std.mem.sort(Cand, cands.items, {}, Cand.more);
-+    if (cands.items.len > k_lim) cands.items.len = k_lim;
-+
-+    const top_scaled = (cands.items[0].logit - max_logit) * rule.inv_t;
-+    var sum: f32 = 0;
-+    var kept: usize = 0;
-+    for (cands.items) |c| {
-+        const scaled = (c.logit - max_logit) * rule.inv_t;
-+        if (kept > 0 and scaled - top_scaled < rule.min_log) break;
-+        const p = @exp(scaled);
-+        cands.items[kept] = .{ .id = c.id, .logit = c.logit, .prob = p };
-+        sum += p;
-+        kept += 1;
-+    }
-+    cands.items.len = @as(usize, @max(kept, @as(usize, 1)));
-+
-+    if (rule.top_p > 0 and rule.top_p < 1.0 and sum > 0) {
-+        var acc: f32 = 0;
-+        var p_kept: usize = 0;
-+        for (cands.items) |c| {
-+            acc += c.prob / sum;
-+            p_kept += 1;
-+            if (acc >= rule.top_p) break;
-+        }
-+        cands.items.len = @as(usize, @max(p_kept, @as(usize, 1)));
-+        sum = 0;
-+        for (cands.items) |c| sum += c.prob;
-+    }
-+    if (!(sum > 0)) return cands.items[0].id;
-+
-+    var mix: u64 = rule.seed ^ (pos *% 0x9E3779B97F4A7C15);
-+    mix = (mix ^ (mix >> 30)) *% 0xBF58476D1CE4E5B9;
-+    mix = (mix ^ (mix >> 27)) *% 0x94D049BB133111EB;
-+    mix ^= mix >> 31;
-+    const u = @as(f32, @floatFromInt(mix >> 40)) * (1.0 / 16777216.0) * sum;
-+    var walk: f32 = 0;
-+    for (cands.items) |c| {
-+        walk += c.prob;
-+        if (u <= walk) return c.id;
-+    }
-+    return cands.items[cands.items.len - 1].id;
-+}
++pub const SampleCand = vocab_gather.SampleCand;
++pub const sampleRowF32 = vocab_gather.sampleRowF32;
 +
 +const Lane = struct {
 +    slot: usize, len: usize = 0, base: usize = 0, anchor_row: usize = 0,
@@ -17188,9 +17133,9 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +}
 +
 +pub const Hy4Backend = struct {
-+    priority_copies: bool = false, untimed: bool = false, time_prefill: bool = false, gpa: std.mem.Allocator, model: *resident.ResidentModel,
++    priority_copies: bool = false, untimed: bool = false, time_prefill: bool = false, ring_broken: bool = false, gpa: std.mem.Allocator, model: *resident.ResidentModel,
 +    pools: []kv_pool.KvPool, slot_anchors: []?drafter_mod.AnchorState, physical_cap: usize,
-+    free: []bool, slot_last_logits: [][]f32, work_logits: []f32,
++    free: []bool, slot_last_logits: [][]f32, work_logits: []f32, sample_cands: []SampleCand = &.{},
 +    plan_link: ?*tp.planlink.PlanLink = null,
 +    lanes_map: std.AutoHashMapUnmanaged(*const Stream, Lane) = .empty,
 +    tok_ring: [ring]u32 = @splat(0), next_handle: u64 = 0,
@@ -17227,6 +17172,9 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +        for (slot_last) |*buf| { buf.* = try gpa.alloc(f32, model.t.vocab_size); made_last += 1; }
 +
 +        const work_logits = try gpa.alloc(f32, max_window * model.t.vocab_size);
++        errdefer gpa.free(work_logits);
++        const sample_cands = try gpa.alloc(SampleCand, model.t.vocab_size);
++        errdefer gpa.free(sample_cands);
 +        const is_tp = model.tp_sess != null;
 +        const blk_ms = if (model.drafter) |dr| (if (dr.step_ms <= 1.0) @as(f64, 0.5) else if (dr.weights.hasExl3()) (if (is_tp) @as(f64, 7.5) else @as(f64, 24.0)) else (if (is_tp) @as(f64, 18.0) else @as(f64, 55.0))) else 0.0;
 +        const each_ms = if (model.drafter) |dr| (if (dr.step_ms <= 1.0) @as(f64, 0.2) else if (dr.weights.custom_head != null and dr.weights.custom_head.?.hasExl3()) (if (is_tp) @as(f64, 0.6) else @as(f64, 2.0)) else dr.step_ms) else 0.0;
@@ -17242,7 +17190,7 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +        return .{
 +            .untimed = rs.untimed, .time_prefill = time_prefill, .gpa = gpa, .model = model, .pools = pools, .slot_anchors = slot_anchors,
 +            .physical_cap = physical_cap, .free = free, .slot_last_logits = slot_last,
-+            .work_logits = work_logits, .window_costs_buf = wc,
++            .work_logits = work_logits, .sample_cands = sample_cands, .window_costs_buf = wc,
 +        };
 +    }
 +
@@ -17250,6 +17198,7 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +        var it = self.lanes_map.valueIterator();
 +        while (it.next()) |l| l.rows.deinit(self.gpa);
 +        self.lanes_map.deinit(self.gpa);
++        if (self.sample_cands.len > 0) self.gpa.free(self.sample_cands);
 +        self.gpa.free(self.work_logits);
 +        for (self.slot_last_logits) |buf| self.gpa.free(buf);
 +        self.gpa.free(self.slot_last_logits);
@@ -17261,18 +17210,24 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +        self.* = undefined;
 +    }
 +
++    pub fn abortRing(self: *Hy4Backend) void {
++        self.ring_broken = true;
++        if (self.plan_link) |pl| vision_runtime.abortFanOut(pl, self.model.tp_sess);
++    }
++
 +    fn execForward(self: *Hy4Backend, slot: usize, first_pos: usize, tokens: []const u32, anc_off: usize, anc_rows: usize) !void {
 +        return self.execStep(slot, first_pos, tokens, anc_off, anc_rows, null);
 +    }
 +
 +    fn execStep(self: *Hy4Backend, slot: usize, first_pos: usize, tokens: []const u32, anc_off: usize, anc_rows: usize, greedy_ids: ?[]u32) !void {
++        if (self.ring_broken) return error.BrokenTpRing;
 +        if (self.plan_link) |pl| if (pl.rank == 0) {
 +            var frame = try self.gpa.alloc(i64, 6 + tokens.len);
 +            defer self.gpa.free(frame);
 +            const op = if (greedy_ids != null) boundary.PlanOp.forward_greedy else boundary.PlanOp.forward_step;
 +            frame[0..6].* = .{ @intFromEnum(op), @intCast(slot), @intCast(first_pos), @intCast(anc_off), @intCast(anc_rows), @intCast(tokens.len) };
 +            for (tokens, 0..) |tok, i| frame[6 + i] = tok;
-+            try pl.send(frame);
++            pl.send(frame) catch |err| { self.abortRing(); return err; };
 +        };
 +        self.model.sc.vision_slot = slot; defer self.model.sc.vision_slot = null;
 +        if (greedy_ids) |ids| return self.model.forwardGreedy(&self.pools[slot], first_pos, tokens, ids);
@@ -17281,23 +17236,26 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +    }
 +
 +    fn execLogits(self: *Hy4Backend, slot: usize, row_offset: usize, rows: usize, logits_out: []f32, capture_anc: bool) !void {
++        if (self.ring_broken) return error.BrokenTpRing;
 +        if (self.plan_link) |pl| if (pl.rank == 0) {
-+            try pl.send(&.{ @intFromEnum(boundary.PlanOp.compute_logits), @intCast(slot), @intCast(row_offset), @intCast(rows), @intFromBool(capture_anc) });
++            pl.send(&.{ @intFromEnum(boundary.PlanOp.compute_logits), @intCast(slot), @intCast(row_offset), @intCast(rows), @intFromBool(capture_anc) }) catch |err| { self.abortRing(); return err; };
 +        };
 +        const anc: ?*drafter_mod.AnchorState = if (capture_anc and self.slot_anchors[slot] != null) &self.slot_anchors[slot].? else null;
 +        try self.model.computeLogitsAnchor(row_offset, rows, logits_out, anc);
 +    }
 +
 +    fn execClearRange(self: *Hy4Backend, slot: usize, from_pos: usize, to_pos: usize) !void {
++        if (self.ring_broken) return error.BrokenTpRing;
 +        if (self.plan_link) |pl| if (pl.rank == 0) {
-+            try pl.send(&.{ @intFromEnum(boundary.PlanOp.clear_range), @intCast(slot), @intCast(from_pos), @intCast(to_pos) });
++            pl.send(&.{ @intFromEnum(boundary.PlanOp.clear_range), @intCast(slot), @intCast(from_pos), @intCast(to_pos) }) catch |err| { self.abortRing(); return err; };
 +        };
-+        try self.pools[slot].clearRange(self.model.t, from_pos, to_pos, self.model.rt.stream.handle);
++        self.pools[slot].clearRange(self.model.t, from_pos, to_pos, self.model.rt.stream.handle) catch |err| { self.abortRing(); return err; };
 +    }
 +
 +    fn execGreedy(self: *Hy4Backend, slot: usize, row_offset: usize, ids: []u32, capture_anc: bool) !void {
++        if (self.ring_broken) return error.BrokenTpRing;
 +        if (self.plan_link) |pl| if (pl.rank == 0) {
-+            try pl.send(&.{ @intFromEnum(boundary.PlanOp.greedy_rows), @intCast(slot), @intCast(row_offset), @intCast(ids.len), @intFromBool(capture_anc) });
++            pl.send(&.{ @intFromEnum(boundary.PlanOp.greedy_rows), @intCast(slot), @intCast(row_offset), @intCast(ids.len), @intFromBool(capture_anc) }) catch |err| { self.abortRing(); return err; };
 +        };
 +        const anc: ?*drafter_mod.AnchorState = if (capture_anc and self.slot_anchors[slot] != null) &self.slot_anchors[slot].? else null;
 +        try self.model.computeGreedyAnchor(row_offset, ids, anc);
@@ -17357,27 +17315,23 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +                    const from_pos: usize = @intCast(msg[2]);
 +                    const to_pos: usize = @intCast(msg[3]);
 +                    if (slot >= self.pools.len) return error.Protocol;
-+                    try self.pools[slot].clearRange(self.model.t, from_pos, to_pos, self.model.rt.stream.handle);
++                    self.pools[slot].clearRange(self.model.t, from_pos, to_pos, self.model.rt.stream.handle) catch |err| { self.abortRing(); return err; };
 +                },
 +                .draft_propose => {
-+                    if (msg.len != 8) return error.Protocol;
-+                    const slot: usize = @intCast(msg[1]);
-+                    const anchor_row: usize = @intCast(msg[2]);
-+                    const pos: usize = @intCast(msg[3]);
-+                    const bonus: u32 = @intCast(msg[4]);
-+                    const hold_cap: usize = @intCast(msg[5]);
-+                    const is_greedy = msg[6] != 0;
-+                    const mm_bits: u32 = @intCast(msg[7]);
-+                    if (slot >= self.pools.len or hold_cap >= max_window) return error.Protocol;
-+                    const dr = &(self.model.drafter orelse return error.NoDraftHead);
-+                    dr.min_margin_override = if (mm_bits == 0) null else @bitCast(mm_bits);
-+                    defer dr.min_margin_override = null;
-+                    const anc = &(self.slot_anchors[slot] orelse return error.NoDraftHead);
-+                    const hd = self.model.head orelse return error.HeadSkipped;
-+                    const DummyPick = struct { fn pick(_: *anyopaque, _: []const f32, _: u64) !u32 { return 0; } };
-+                    var dummy: u8 = 0;
-+                    self.model.sc.mrope = if (self.model.vision) |vr| vr.slotRopeDelta(slot) else null; defer self.model.sc.mrope = null;
-+                    _ = try dr.proposeTp(&self.model.rt, &self.model.sc, self.model.t, self.model.trunk.embed_bf16, hd, self.model.layers.len, &self.pools[slot], anc, anchor_row, pos, bonus, hold_cap, self.model.tp_sess, is_greedy, DummyPick.pick, &dummy, held_tmp[0..hold_cap]);
++                    const dp = vocab_gather.decodeDraftPropose(msg, self.pools.len, max_window) catch |err| { self.abortRing(); return err; };
++                    const dr = &(self.model.drafter orelse { self.abortRing(); return error.NoDraftHead; });
++                    dr.min_margin_override = dp.min_margin;
++                    dr.min_margin_locked = true;
++                    defer { dr.min_margin_override = null; dr.min_margin_locked = false; }
++                    const anc = &(self.slot_anchors[dp.slot] orelse { self.abortRing(); return error.NoDraftHead; });
++                    const hd = self.model.head orelse { self.abortRing(); return error.HeadSkipped; };
++                    var fctx: vocab_gather.FollowerPickCtx = .{ .gpa = self.gpa, .cands = self.sample_cands, .rule = dp.rule };
++                    self.model.sc.mrope = if (self.model.vision) |vr| vr.slotRopeDelta(dp.slot) else null; defer self.model.sc.mrope = null;
++                    _ = dr.proposeTp(&self.model.rt, &self.model.sc, self.model.t, self.model.trunk.embed_bf16, hd, self.model.layers.len, &self.pools[dp.slot], anc, dp.anchor_row, dp.pos, dp.bonus, dp.hold_cap, self.model.tp_sess, dp.rule == null, vocab_gather.FollowerPickCtx.pick, &fctx, held_tmp[0..dp.hold_cap]) catch |err| {
++                        if (!vocab_gather.shouldAbortOnDraftError(err)) continue;
++                        self.abortRing();
++                        return err;
++                    };
 +                },
 +                .vision_set, .vision_clear => try (self.model.vision orelse return error.Protocol).applyFollowerMsg(msg),
 +                .greedy_rows => {
@@ -17520,11 +17474,16 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +        if (l.fill) |at| s.keepInterruptedPrefill(@intCast(at));
 +    }
 +
++    fn sampleBackendRow(self: *Hy4Backend, logits: []const f32, rule: cuda.sample.Rule, pos: u64) !u32 {
++        if (self.sample_cands.len >= logits.len) return vocab_gather.sampleRowF32InPlace(self.sample_cands, logits, rule, pos);
++        return sampleRowF32(self.gpa, logits, rule, pos);
++    }
++
 +    fn first(ptr: *anyopaque, s: *Stream, position: u64) anyerror!u64 {
 +        const self = castSelf(ptr);
 +        const l = self.lanes_map.getPtr(s) orelse return error.UnknownStream;
 +        if (position != l.len or l.fill != null) return error.PositionMismatch;
-+        return self.pushToken(if (l.rule) |r| try sampleRowF32(self.gpa, l.last_logits, r, position) else l.first_greedy[0]);
++        return self.pushToken(if (l.rule) |r| try self.sampleBackendRow(l.last_logits, r, position) else l.first_greedy[0]);
 +    }
 +
 +    fn queue(ptr: *anyopaque, s: *Stream, feed: be.Feed, position: u64) anyerror!u64 {
@@ -17538,7 +17497,7 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +        if (l.rule) |r| {
 +            const logits = self.work_logits[0..self.model.t.vocab_size];
 +            try self.execLogits(l.slot, 0, 1, logits, true);
-+            id[0] = try sampleRowF32(self.gpa, logits, r, position);
++            id[0] = try self.sampleBackendRow(logits, r, position);
 +        } else try self.execGreedy(l.slot, 0, &id, true);
 +        l.len += 1; l.anchor_row = 0;
 +        return self.pushToken(id[0]);
@@ -17584,7 +17543,7 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +                if (l.rule) |rule| {
 +                    const logits = self.work_logits[0 .. n * v];
 +                    try self.execLogits(l.slot, 0, n, logits, true);
-+                    for (0..n) |r| o.sampled[r] = try sampleRowF32(self.gpa, logits[r * v ..][0..v], rule, w.positions[r]);
++                    for (0..n) |r| o.sampled[r] = try self.sampleBackendRow(logits[r * v ..][0..v], rule, w.positions[r]);
 +                } else try self.execGreedy(l.slot, 0, o.sampled[0..n], true);
 +            }
 +            @memcpy(o.drafts[0 .. n - 1], l.rows.items[1..]);
@@ -17609,7 +17568,7 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +    }
 +
 +    fn pickToken(self: *Hy4Backend, l: *const Lane, logits: []const f32, pos: u64) !u32 {
-+        return if (l.rule) |r| sampleRowF32(self.gpa, logits, r, pos) else resident.argmaxF32(logits);
++        return if (l.rule) |r| self.sampleBackendRow(logits, r, pos) else resident.argmaxF32(logits);
 +    }
 +
 +    const DraftPickCtx = struct {
@@ -17640,14 +17599,19 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +            if (r.position != l.len + 1) return error.PositionMismatch;
 +            const hold_cap: usize = @min(@as(usize, r.depth), @as(usize, max_window - 1));
 +            const is_greedy = (l.rule == null);
-+            const mm_opt = dr.min_margin_override orelse try draft_policy.envMinMargin();
-+            const mm_bits: u32 = if (mm_opt) |mm| @bitCast(mm) else 0;
++            const mm_opt = try dr.resolveMinMargin();
++            if (self.ring_broken) return error.BrokenTpRing;
 +            if (self.plan_link) |pl| if (pl.rank == 0) {
-+                try pl.send(&.{ @intFromEnum(boundary.PlanOp.draft_propose), @intCast(l.slot), @intCast(anchor_row), @intCast(l.len), @intCast(bonus), @intCast(hold_cap), @intFromBool(is_greedy), mm_bits });
++                var dp_buf: [12]i64 = undefined;
++                pl.send(vocab_gather.encodeDraftPropose(l.slot, anchor_row, l.len, bonus, hold_cap, l.rule, mm_opt, &dp_buf)) catch |err| { self.abortRing(); return err; };
 +            };
 +            var pctx: DraftPickCtx = .{ .hb = self, .lane = l };
 +            self.model.sc.mrope = if (self.model.vision) |vr| vr.slotRopeDelta(l.slot) else null; defer self.model.sc.mrope = null;
-+            const cnt = draft_policy.resolveEffectiveDepth(hold_cap, try dr.proposeTp(&self.model.rt, &self.model.sc, self.model.t, self.model.trunk.embed_bf16, hd, self.model.layers.len, &self.pools[l.slot], anc, anchor_row, l.len, bonus, hold_cap, self.model.tp_sess, is_greedy, DraftPickCtx.pick, &pctx, l.held[0..hold_cap]));
++            const raw_cnt = dr.proposeTp(&self.model.rt, &self.model.sc, self.model.t, self.model.trunk.embed_bf16, hd, self.model.layers.len, &self.pools[l.slot], anc, anchor_row, l.len, bonus, hold_cap, self.model.tp_sess, is_greedy, DraftPickCtx.pick, &pctx, l.held[0..hold_cap]) catch |err| {
++                if (vocab_gather.shouldAbortOnDraftError(err)) self.abortRing();
++                return err;
++            };
++            const cnt = draft_policy.resolveEffectiveDepth(hold_cap, raw_cnt);
 +            l.nheld = @intCast(cnt);
 +            self.draft_calls += 1; self.offered_tokens += cnt; self.cut_tokens += hold_cap - cnt;
 +            r.stream.draft_calls += 1; r.stream.offered += cnt;
@@ -17673,10 +17637,10 @@ index 0000000000000000000000000000000000000000..675f4802df886d22b11bf951ea5834ef
 +};
 diff --git a/zig/src/families/hy4/cuda_native.zig b/zig/src/families/hy4/cuda_native.zig
 new file mode 100644
-index 0000000000000000000000000000000000000000..ca8f61d5458404d4d7afa0dd4273239228f25721
+index 0000000000000000000000000000000000000000..2d1628530ca3fbff1dc111d96757a494fbaa0e86
 --- /dev/null
 +++ b/zig/src/families/hy4/cuda_native.zig
-@@ -0,0 +1,509 @@
+@@ -0,0 +1,520 @@
 +//! Full Hy4 (`hy_v4_vl` and `hy_v4`) behind TensorFold's native CUDA registry (`zig/src/native/cuda_families.zig`).
 +//! Supports 1-rank serving (with optional DFly2 `--drafter`) and 4-rank (`--tp 4`) serving with `PlanLink` follower lockstep.
 +const std = @import("std");
@@ -17759,15 +17723,26 @@ index 0000000000000000000000000000000000000000..ca8f61d5458404d4d7afa0dd42732392
 +    direct_write: bool, p_rows: u32, sw: cuda.hy4_kernels.PrefillSwitches, d_tag: []const u8,
 +    vis_limits: ?vision_image.Limits,
 +) ![]const u8 {
++    return formatServeRunTagWithBootstrap(
++        buf, context, lanes_n, lanes_fixed, has_drafter, direct_write,
++        boundary.envFlag("TF_HY4_VOCAB_BOOTSTRAP"), p_rows, sw, d_tag, vis_limits,
++    );
++}
++
++pub fn formatServeRunTagWithBootstrap(
++    buf: []u8, context: usize, lanes_n: u32, lanes_fixed: bool, has_drafter: bool,
++    direct_write: bool, vocab_bootstrap: bool, p_rows: u32, sw: cuda.hy4_kernels.PrefillSwitches, d_tag: []const u8,
++    vis_limits: ?vision_image.Limits,
++) ![]const u8 {
 +    if (vis_limits) |vl| {
-+        return std.fmt.bufPrint(buf, "serve:{d}:{d}:{}:{}:{}:{d}:{}:{}:{}:{}:{s}:{d}:{s}:vis={d}:{d}", .{
-+            context, lanes_n, lanes_fixed, has_drafter, direct_write, p_rows,
++        return std.fmt.bufPrint(buf, "serve:{d}:{d}:{}:{}:{}:vb={}:{d}:{}:{}:{}:{}:{s}:{d}:{s}:vis={d}:{d}", .{
++            context, lanes_n, lanes_fixed, has_drafter, direct_write, vocab_bootstrap, p_rows,
 +            sw.fast_prefill, sw.fast_routed, sw.fast_mla, sw.fast_indexer, @tagName(sw.prefill_ar), sw.min_prefill_rows, d_tag,
 +            vl.image_tokens, vl.max_images,
 +        });
 +    }
-+    return std.fmt.bufPrint(buf, "serve:{d}:{d}:{}:{}:{}:{d}:{}:{}:{}:{}:{s}:{d}:{s}", .{
-+        context, lanes_n, lanes_fixed, has_drafter, direct_write, p_rows,
++    return std.fmt.bufPrint(buf, "serve:{d}:{d}:{}:{}:{}:vb={}:{d}:{}:{}:{}:{}:{s}:{d}:{s}", .{
++        context, lanes_n, lanes_fixed, has_drafter, direct_write, vocab_bootstrap, p_rows,
 +        sw.fast_prefill, sw.fast_routed, sw.fast_mla, sw.fast_indexer, @tagName(sw.prefill_ar), sw.min_prefill_rows, d_tag,
 +    });
 +}
@@ -19396,10 +19371,10 @@ index 0000000000000000000000000000000000000000..d3ed0a0df6689526a851f7d83145b662
 +// SOFTWARE.
 diff --git a/zig/src/families/hy4/drafter.zig b/zig/src/families/hy4/drafter.zig
 new file mode 100644
-index 0000000000000000000000000000000000000000..c3ae0bdcdf63c1dfbb9e977738f3c2ccf2ffa0f2
+index 0000000000000000000000000000000000000000..7d71d8b58c52849f0c0fd46a7a9ced276bc7ddb1
 --- /dev/null
 +++ b/zig/src/families/hy4/drafter.zig
-@@ -0,0 +1,599 @@
+@@ -0,0 +1,598 @@
 +//! DFly2 speculative drafter (`model.dfly_layers.*`, 5 dense gated-MLA blocks, `slot0` fusion, hidden correction)
 +//! on 1 rank (`TP=1`) and 4 ranks (`TP=4`) for Full Hy4 (`hy_v4_vl` / `hy_v4`).
 +const std = @import("std");
@@ -19747,7 +19722,12 @@ index 0000000000000000000000000000000000000000..c3ae0bdcdf63c1dfbb9e977738f3c2cc
 +    gpa: std.mem.Allocator,
 +    weights: DraftWeights,
 +    sc: DraftScratch,
-+    fault_wrong_token: bool = false, step_ms: f64 = 0.0, min_margin_override: ?f32 = null,
++    fault_wrong_token: bool = false, step_ms: f64 = 0.0, min_margin_override: ?f32 = null, min_margin_locked: bool = false,
++
++    pub fn resolveMinMargin(self: *const Drafter) !?f32 {
++        if (self.fault_wrong_token) return null;
++        return if (self.min_margin_locked) self.min_margin_override else (self.min_margin_override orelse try draft_policy.envMinMargin());
++    }
 +
 +    pub fn loadDirect(
 +        gpa: std.mem.Allocator, io: std.Io, d: *const cuda.Driver, idx: *const weights.ShardIndex,
@@ -19906,7 +19886,7 @@ index 0000000000000000000000000000000000000000..c3ae0bdcdf63c1dfbb9e977738f3c2cc
 +        const v_pad = head_ro.vocabPad();
 +        const v_full = head_ro.vocabFull();
 +        const rk_idx: usize = if (tp_sess) |tps| tps.rank_idx else 0;
-+        const min_margin: ?f32 = if (self.fault_wrong_token) null else (self.min_margin_override orelse try draft_policy.envMinMargin());
++        const min_margin: ?f32 = try self.resolveMinMargin();
 +        var prev_tok = bonus_tok;
 +        for (0..count) |col_idx| {
 +            const col = col_idx + 1;
@@ -19954,16 +19934,10 @@ index 0000000000000000000000000000000000000000..c3ae0bdcdf63c1dfbb9e977738f3c2cc
 +                }
 +                break :blk_g if (self.fault_wrong_token) self.weights.mask_token_id else picked[0];
 +            } else if (tp_sess) |tps| blk_tp: {
-+                try rt.stream.synchronize();
-+                try cuda.memory.download(rt.d, msc.logits_f32.ptr, std.mem.sliceAsBytes(self.sc.local_logits[0..v_pad]));
-+                try tps.gatherVocabLogits(rt.gpa, rt.stream, self.sc.local_logits[0..v_pad], 1, v_pad, v_full, self.sc.host_logits);
++                try tps.gatherVocabDevice(rt.gpa, rt.d, rt.stream, msc.logits_f32.ptr, msc.tp_gathered, 1, v_pad, v_full, self.sc.host_logits);
 +                if (self.fault_wrong_token) { _ = try argminF32(self.sc.host_logits); break :blk_tp self.weights.mask_token_id; }
-+                const cut_here = if (tps.rank == .zero and min_margin != null) (try greedy.hostTop2(self.sc.host_logits)).margin < min_margin.? else false;
-+                var tok_le: u32 = if (tps.rank != .zero) 0 else if (cut_here) std.math.maxInt(u32) else std.mem.nativeToLittle(u32, try pickFn.?(pick_ctx.?, self.sc.host_logits, @intCast(p + col)));
-+                tps.bootstrap.broadcast(std.mem.asBytes(&tok_le), std.mem.asBytes(&tok_le)) catch |err| return if (err == error.Timeout) error.Hy4BootstrapTimeout else error.Hy4RunMismatch;
-+                const tok = std.mem.littleToNative(u32, tok_le);
-+                if (tok == std.math.maxInt(u32)) return col_idx;
-+                break :blk_tp tok;
++                if (min_margin) |mm| if ((try greedy.hostTop2(self.sc.host_logits)).margin < mm) return col_idx;
++                break :blk_tp try pickFn.?(pick_ctx.?, self.sc.host_logits, @intCast(p + col));
 +            } else blk_one: {
 +                try rt.stream.synchronize();
 +                try cuda.memory.download(rt.d, msc.logits_f32.ptr, std.mem.sliceAsBytes(self.sc.host_logits));
@@ -21111,10 +21085,10 @@ index 0000000000000000000000000000000000000000..6fccd5810a65bc008b5ad07a3ee4e05f
 +}
 diff --git a/zig/src/families/hy4/forward.zig b/zig/src/families/hy4/forward.zig
 new file mode 100644
-index 0000000000000000000000000000000000000000..c90621b66d69f504af1d9c70947fddae06f51be7
+index 0000000000000000000000000000000000000000..3bfd445c1866cf39ab4f5221f6ff63497c740ed1
 --- /dev/null
 +++ b/zig/src/families/hy4/forward.zig
-@@ -0,0 +1,595 @@
+@@ -0,0 +1,599 @@
 +//! One-rank and four-rank (`TP=4`) Full Hy4 CUDA forward pass over `cuda.hy4_ops` and `cuda.hy4_tp.Boundary`.
 +//!
 +//! Wires `matchColumnPlan` on every rank-sliced BF16 GEMM (`q_b`, `linear_gate`, `dense` & `shared` `gate`/`up`,
@@ -21664,13 +21638,17 @@ index 0000000000000000000000000000000000000000..c90621b66d69f504af1d9c70947fddae
 +    if (logits_out.len != rows * head.vocab_full * 4) return error.BadOracleShape;
 +    const ptr = try forwardHeadDeviceWithRef(rt, sc, t, head, streams_ptr, rows, ref_chunk_rows);
 +    if (tp_sess) |tps| {
-+        const local_f32 = try rt.gpa.alloc(f32, rows * head.vocab_pad);
-+        defer rt.gpa.free(local_f32);
-+        try rt.stream.synchronize();
-+        try cuda.memory.download(rt.d, ptr, std.mem.sliceAsBytes(local_f32));
-+        const out_f32: []f32 = @alignCast(std.mem.bytesAsSlice(f32, logits_out));
++        if (io_opt != null) try rt.stream.synchronize();
 +        const gt0: u64 = if (io_opt) |io| @intCast(@max(@as(i128, 0), std.Io.Clock.awake.now(io).toNanoseconds())) else 0;
-+        try tps.gatherVocabLogits(rt.gpa, rt.stream, local_f32, rows, head.vocab_pad, head.vocab_full, out_f32);
++        if (@intFromPtr(logits_out.ptr) % @alignOf(f32) == 0) {
++            const out_f32: []f32 = @alignCast(std.mem.bytesAsSlice(f32, logits_out));
++            try tps.gatherVocabDevice(rt.gpa, rt.d, rt.stream, ptr, sc.tp_gathered, rows, head.vocab_pad, head.vocab_full, out_f32);
++        } else {
++            const tmp = try rt.gpa.alloc(f32, rows * head.vocab_full);
++            defer rt.gpa.free(tmp);
++            try tps.gatherVocabDevice(rt.gpa, rt.d, rt.stream, ptr, sc.tp_gathered, rows, head.vocab_pad, head.vocab_full, tmp);
++            @memcpy(logits_out, std.mem.sliceAsBytes(tmp));
++        }
 +        if (io_opt) |io| if (gather_ns_out) |g| {
 +            const gt1: u64 = @intCast(@max(@as(i128, 0), std.Io.Clock.awake.now(io).toNanoseconds()));
 +            g.* = gt1 -| gt0;
@@ -21973,7 +21951,7 @@ index 0000000000000000000000000000000000000000..0ea683cb04dc7299c3664e30359480de
 +}
 diff --git a/zig/src/families/hy4/hy4.zig b/zig/src/families/hy4/hy4.zig
 new file mode 100644
-index 0000000000000000000000000000000000000000..c6b5b76f3bcc15d021bad60f2b3b9210f102442c
+index 0000000000000000000000000000000000000000..38555f7e5fa87d128f5ea7728c439aad8c2afeeb
 --- /dev/null
 +++ b/zig/src/families/hy4/hy4.zig
 @@ -0,0 +1,599 @@
@@ -22493,8 +22471,8 @@ index 0000000000000000000000000000000000000000..c6b5b76f3bcc15d021bad60f2b3b9210
 +    if (layer_arg) |l| {
 +        if (tp_ptr) |tps| {
 +            var tbuf: [160]u8 = undefined;
-+            try tps.agreePackAndRun(gpa, io, &idx, try std.fmt.bufPrint(&tbuf, "replay:{d}:{d}:{}:{}:{}:{}:{}", .{
-+                l, end_layer_arg orelse l, with_head, dump_shared, dump_all_ranks, verify_picks, boundary.envFlag("HY4_TP_DIRECT_WRITE"),
++            try tps.agreePackAndRun(gpa, io, &idx, try std.fmt.bufPrint(&tbuf, "replay:{d}:{d}:{}:{}:{}:{}:{}:{}", .{
++                l, end_layer_arg orelse l, with_head, dump_shared, dump_all_ranks, verify_picks, boundary.envFlag("HY4_TP_DIRECT_WRITE"), boundary.envFlag("TF_HY4_VOCAB_BOOTSTRAP"),
 +            }));
 +        }
 +        var rt = try forward.Runtime.init(gpa, &driver, stream);
@@ -22528,10 +22506,10 @@ index 0000000000000000000000000000000000000000..c6b5b76f3bcc15d021bad60f2b3b9210
 +            var tbuf: [448]u8 = undefined;
 +            const dtag = if (drafter_idx_ptr) |didx| didx.trunk_tag else "";
 +            const mm_bits: u32 = if (draft_min_margin orelse try draft_policy.envMinMargin()) |mm| @bitCast(mm) else 0;
-+            const rtag = try std.fmt.bufPrint(&tbuf, "run:{}:{?d}:{}:{?d}:{?d}:{d}:{d}:{s}:{}:{}:{}:{}:{}:{}:{?d}:{x}:{}:{s}:{d}:{d}:{x}", .{
++            const rtag = try std.fmt.bufPrint(&tbuf, "run:{}:{?d}:{}:{?d}:{?d}:{d}:{d}:{s}:{}:{}:{}:{}:{}:{}:{}:{?d}:{x}:{}:{s}:{d}:{d}:{x}", .{
 +                use_resident, max_layers, skip_head, chunk_size, greedy_tokens, bench_window_iters, bench_parts_iters,
 +                bench_widths_arg orelse "", boundary.envFlag("TF_HY4_INDEX_PAGE_2K"), boundary.envFlag("TF_HY4_GREEDY_FULL_GATHER"),
-+                boundary.envFlag("HY4_TP_DIRECT_WRITE"), cached_last, dump_all_ranks, verify_picks, draft_depth, mm_bits, auto_depth, dtag, prompt.batch, prompt.seq_len, psha[0..8],
++                boundary.envFlag("HY4_TP_DIRECT_WRITE"), boundary.envFlag("TF_HY4_VOCAB_BOOTSTRAP"), cached_last, dump_all_ranks, verify_picks, draft_depth, mm_bits, auto_depth, dtag, prompt.batch, prompt.seq_len, psha[0..8],
 +            });
 +            try tps.agreePackAndRun(gpa, io, &idx, rtag);
 +            if (drafter_idx_ptr) |didx| if (didx != &idx) try tps.agreeDrafterPack(gpa, io, didx);
@@ -30148,10 +30126,10 @@ index 0000000000000000000000000000000000000000..29c99e1e063d3ce8227a15bf431d078d
 +}
 diff --git a/zig/src/families/hy4/vision_contract_test.zig b/zig/src/families/hy4/vision_contract_test.zig
 new file mode 100644
-index 0000000000000000000000000000000000000000..89873bf5c34032753fb659e03307a1f209e55020
+index 0000000000000000000000000000000000000000..6e25e6bb8515bf2f47d523e137522dca771fd831
 --- /dev/null
 +++ b/zig/src/families/hy4/vision_contract_test.zig
-@@ -0,0 +1,216 @@
+@@ -0,0 +1,593 @@
 +//! Host tests for Hy4 native registration, run_tag, admission accounting, and hostile vision input refusals.
 +const std = @import("std");
 +const core = @import("core");
@@ -30160,7 +30138,11 @@ index 0000000000000000000000000000000000000000..89873bf5c34032753fb659e03307a1f2
 +const cache = @import("cache.zig");
 +const config = @import("config.zig");
 +const kv_pool = @import("kv_pool.zig");
++const boundary = @import("boundary.zig");
++const forward = @import("forward.zig");
++const resident = @import("resident.zig");
 +const drafter_mod = @import("drafter.zig");
++const vocab_gather = @import("vocab_gather.zig");
 +const cuda_backend = @import("cuda_backend.zig");
 +const cuda_native = @import("cuda_native.zig");
 +const vision_config = @import("vision_config.zig");
@@ -30368,12 +30350,385 @@ index 0000000000000000000000000000000000000000..89873bf5c34032753fb659e03307a1f2
 +    try std.testing.expect(vision_image.VisionOffer.explain(error.NoWebpLibrary) != null);
 +    _ = core;
 +}
++
++extern "c" fn setenv(name: [*:0]const u8, value: [*:0]const u8, overwrite: c_int) c_int;
++extern "c" fn unsetenv(name: [*:0]const u8) c_int;
++
++test "r2 finding 1: TF_HY4_VOCAB_BOOTSTRAP is agreed in serve run_tag and 4-rank TCP fallback syncs once per rank" {
++    const gpa = std.testing.allocator;
++    defer _ = unsetenv("TF_HY4_VOCAB_BOOTSTRAP");
++
++    const Sw = cuda.hy4_kernels.PrefillSwitches;
++    const sw: Sw = .{ .fast_prefill = true, .fast_routed = true, .fast_mla = true, .fast_indexer = true, .prefill_ar = .fp32, .min_prefill_rows = 256 };
++    _ = unsetenv("TF_HY4_VOCAB_BOOTSTRAP");
++    var b_off: [320]u8 = undefined;
++    const t_off = try cuda_native.formatServeRunTag(&b_off, 131072, 1, false, true, false, 2048, sw, "4b", .{ .image_tokens = 8192, .max_images = 8 });
++    _ = setenv("TF_HY4_VOCAB_BOOTSTRAP", "1", 1);
++    var b_on: [320]u8 = undefined;
++    const t_on = try cuda_native.formatServeRunTag(&b_on, 131072, 1, false, true, false, 2048, sw, "4b", .{ .image_tokens = 8192, .max_images = 8 });
++    try std.testing.expect(!std.mem.eql(u8, t_off, t_on));
++
++    const ls = try tp.bootstrap.testListener();
++    defer tp.sock.close(ls.fd);
++    const PeerAgree = struct {
++        fn run(port: u16, tag: []const u8, out_err: *?anyerror) void {
++            var b = tp.Bootstrap.open(.{ .world = 2, .rank = 1, .link_port = port, .connect_timeout_ns = 5 * std.time.ns_per_s }) catch |e| { out_err.* = e; return; };
++            defer b.close();
++            b.agree(tag, "Hy4 run settings") catch |e| { out_err.* = if (e == error.Mismatch) error.Hy4RunMismatch else e; };
++        }
++    };
++    var peer_err: ?anyerror = null;
++    const th_ag = try std.Thread.spawn(.{}, PeerAgree.run, .{ ls.port, t_on, &peer_err });
++    var bs0 = try tp.Bootstrap.acceptOn(ls.fd, 2, 5 * std.time.ns_per_s);
++    defer bs0.close();
++    try std.testing.expectError(error.Mismatch, bs0.agree(t_off, "Hy4 run settings"));
++    th_ag.join();
++    try std.testing.expectEqual(@as(?anyerror, error.Hy4RunMismatch), peer_err);
++
++    // Real 4-rank loopback TCP Bootstrap exercising all 3 fallback branches (ptr==0, len<one_row, TF_HY4_VOCAB_BOOTSTRAP=1).
++    const stride: usize = 32;
++    const full_v: usize = 120; // rank 3 padded (4 * 32 = 128 > 120)
++    const rows: usize = 2;
++    const MockFb = struct {
++        var dev_mem: [4 * rows * stride * 4]u8 align(16) = undefined;
++        var sync_calls: std.atomic.Value(usize) = .init(0);
++        var relay_calls: std.atomic.Value(usize) = .init(0);
++        var nccl_calls: std.atomic.Value(usize) = .init(0);
++        fn ctxGetDev(out: *cuda.abi.Device) callconv(.c) cuda.abi.Result { out.* = 0; return 0; }
++        fn devGetAttr(out: *c_int, _: cuda.abi.DeviceAttribute, _: cuda.abi.Device) callconv(.c) cuda.abi.Result { out.* = 0; return 0; }
++        fn sync(_: cuda.abi.Stream) callconv(.c) cuda.abi.Result { _ = sync_calls.fetchAdd(1, .monotonic); return 0; }
++        fn dtoh(dst: ?*anyopaque, src: cuda.abi.DevicePtr, n: usize) callconv(.c) cuda.abi.Result {
++            const off: usize = @intCast(src - 256);
++            @memcpy(@as([*]u8, @ptrCast(dst.?))[0..n], dev_mem[off .. off + n]);
++            return 0;
++        }
++        fn badGather(_: cuda.abi.DevicePtr, _: cuda.abi.DevicePtr, _: usize, _: cuda.nccl.DataType, _: cuda.nccl.Comm, _: cuda.abi.Stream) callconv(.c) cuda.nccl.Result {
++            _ = nccl_calls.fetchAdd(1, .monotonic);
++            return 4;
++        }
++        fn asyncErr(_: cuda.nccl.Comm, res: *cuda.nccl.Result) callconv(.c) cuda.nccl.Result { res.* = 0; return 0; }
++        fn errStr(_: cuda.nccl.Result) callconv(.c) ?[*:0]const u8 { return "ok"; }
++        fn rFits(_: *anyopaque, _: usize) bool { return true; }
++        fn rGather(_: *anyopaque, _: cuda.abi.Stream, _: u64, _: u64, _: usize) anyerror!void { _ = relay_calls.fetchAdd(1, .monotonic); return error.UnexpectedRelay; }
++        fn rCheck(_: *anyopaque) anyerror!void {}
++        fn rAbort(_: *anyopaque) void {}
++        fn rDeinit(_: *anyopaque) void {}
++        fn rFold(_: *anyopaque, _: cuda.abi.Stream, _: u64, _: u64, _: usize, _: u64, _: u64, _: u64) anyerror!bool { return false; }
++    };
++    for (0..4) |rk| {
++        const sl: []f32 = @alignCast(std.mem.bytesAsSlice(f32, MockFb.dev_mem[rk * rows * stride * 4 ..][0 .. rows * stride * 4]));
++        for (0..rows) |r| for (0..stride) |c| { sl[r * stride + c] = @floatFromInt(r * 1000 + rk * stride + c); };
++    }
++    var want_full: [rows * full_v]f32 = undefined;
++    for (0..rows) |r| for (0..full_v) |v| { want_full[r * full_v + v] = @floatFromInt(r * 1000 + v); };
++
++    MockFb.sync_calls.store(0, .monotonic);
++    MockFb.relay_calls.store(0, .monotonic);
++    MockFb.nccl_calls.store(0, .monotonic);
++
++    const ls4 = try tp.bootstrap.testListener();
++    defer tp.sock.close(ls4.fd);
++    const Worker4 = struct {
++        fn run(rk: u32, port: u16, want: []const f32, err_out: *?anyerror) void {
++            var b: tp.Bootstrap = if (rk == 0) (tp.Bootstrap.acceptOn(ls4_fd, 4, 5 * std.time.ns_per_s) catch |e| { err_out.* = e; return; })
++            else (tp.Bootstrap.open(.{ .world = 4, .rank = rk, .link_port = port, .connect_timeout_ns = 5 * std.time.ns_per_s }) catch |e| { err_out.* = e; return; });
++            defer b.close();
++            var drv: cuda.Driver = undefined;
++            drv.api.cuCtxGetDevice = MockFb.ctxGetDev;
++            drv.api.cuDeviceGetAttribute = MockFb.devGetAttr;
++            drv.api.cuStreamSynchronize = MockFb.sync;
++            drv.api.cuMemcpyDtoH_v2 = MockFb.dtoh;
++            var nlib: cuda.nccl.Library = undefined;
++            nlib.api.ncclAllGather = MockFb.badGather;
++            nlib.api.ncclCommGetAsyncError = MockFb.asyncErr;
++            nlib.api.ncclGetErrorString = MockFb.errStr;
++            var dummy_comm: u8 = 1;
++            var dummy_relay: u8 = 2;
++            var tps: boundary.TpSession = .{
++                .rank = @enumFromInt(rk), .rank_idx = rk, .nccl_lib = &nlib, .bootstrap = b,
++                .boundary = .{ .lib = &nlib, .comm = @ptrCast(&dummy_comm), .rank = @enumFromInt(rk), .relay = .{
++                    .ctx = &dummy_relay, .fits = MockFb.rFits, .gather = MockFb.rGather, .check = MockFb.rCheck,
++                    .abort = MockFb.rAbort, .deinit = MockFb.rDeinit, .foldWrite = MockFb.rFold,
++                } },
++                .load_timeout_ns = std.time.ns_per_s,
++            };
++            defer tps.vocab_stage.deinit(std.heap.c_allocator);
++            const stream: cuda.Stream = .{ .d = &drv, .handle = null };
++            const dev_ptr: u64 = 256 + @as(u64, rk) * rows * stride * 4;
++            const g_zero: cuda.DeviceBuffer = .{ .d = &drv, .ptr = 0, .len = 0, .borrowed = true };
++            const g_short: cuda.DeviceBuffer = .{ .d = &drv, .ptr = 4096, .len = 4 * stride * 4 - 4, .borrowed = true };
++            const g_full: cuda.DeviceBuffer = .{ .d = &drv, .ptr = 4096, .len = 4 * rows * stride * 4, .borrowed = true };
++            var out: [rows * full_v]f32 = undefined;
++            for ([_]cuda.DeviceBuffer{ g_zero, g_short, g_full }) |gbuf| {
++                @memset(&out, -1);
++                tps.gatherVocabDevice(std.testing.allocator, &drv, stream, dev_ptr, gbuf, rows, stride, full_v, &out) catch |e| { err_out.* = e; return; };
++                if (!std.mem.eql(f32, want, &out)) { err_out.* = error.TestUnexpectedResult; return; }
++            }
++        }
++        var ls4_fd: tp.sock.Fd = -1;
++    };
++    Worker4.ls4_fd = ls4.fd;
++    _ = setenv("TF_HY4_VOCAB_BOOTSTRAP", "1", 1);
++    var errs: [4]?anyerror = @splat(null);
++    var ths: [3]std.Thread = undefined;
++    for (1..4) |rk| ths[rk - 1] = try std.Thread.spawn(.{}, Worker4.run, .{ @as(u32, @intCast(rk)), ls4.port, &want_full, &errs[rk] });
++    Worker4.run(0, ls4.port, &want_full, &errs[0]);
++    for (&ths) |*t| t.join();
++    for (errs) |e| try std.testing.expectEqual(@as(?anyerror, null), e);
++    try std.testing.expectEqual(@as(usize, 0), MockFb.relay_calls.load(.monotonic));
++    try std.testing.expectEqual(@as(usize, 0), MockFb.nccl_calls.load(.monotonic));
++    try std.testing.expectEqual(@as(usize, 12), MockFb.sync_calls.load(.monotonic));
++    _ = gpa;
++}
++
++const MockDraftHarness = struct {
++    drv: cuda.Driver = undefined,
++    model: resident.ResidentModel = undefined,
++    pools: [1]kv_pool.KvPool = undefined,
++    anchors: [1]?drafter_mod.AnchorState = undefined,
++    free: [1]bool = .{false},
++    host_logits: [32]f32 = undefined,
++    work_logits: [32]f32 = @splat(0),
++    sample_cands: [32]vocab_gather.SampleCand = undefined,
++    hb: cuda_backend.Hy4Backend = undefined,
++
++    var dtoh_calls: std.atomic.Value(usize) = .init(0);
++    var active_logits: [32]f32 = @splat(0);
++
++    fn noopHtoD(_: cuda.abi.DevicePtr, _: ?*const anyopaque, _: usize, _: cuda.abi.Stream) callconv(.c) cuda.abi.Result { return 0; }
++    fn noopLaunch(_: cuda.abi.Function, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: c_uint, _: cuda.abi.Stream, _: ?[*]?*anyopaque, _: ?[*]?*anyopaque) callconv(.c) cuda.abi.Result { return 0; }
++    fn noopSync(_: cuda.abi.Stream) callconv(.c) cuda.abi.Result { return 0; }
++    fn noopCtxSync() callconv(.c) cuda.abi.Result { return 0; }
++    fn hostAlloc(out: *?*anyopaque, size: usize, _: c_uint) callconv(.c) cuda.abi.Result { out.* = std.c.malloc(@max(size, 1)); return 0; }
++    fn hostFree(p: ?*anyopaque) callconv(.c) cuda.abi.Result { std.c.free(p); return 0; }
++    fn evCreate(out: *cuda.abi.Event, _: c_uint) callconv(.c) cuda.abi.Result { out.* = @ptrFromInt(1); return 0; }
++    fn evRecord(_: cuda.abi.Event, _: cuda.abi.Stream) callconv(.c) cuda.abi.Result { return 0; }
++    fn evRecordFlags(_: cuda.abi.Event, _: cuda.abi.Stream, _: c_uint) callconv(.c) cuda.abi.Result { return 0; }
++    fn evSyncOrQuery(_: cuda.abi.Event) callconv(.c) cuda.abi.Result { return 0; }
++    fn ctxGetDev(out: *cuda.abi.Device) callconv(.c) cuda.abi.Result { out.* = 0; return 0; }
++    fn devGetAttr(out: *c_int, _: cuda.abi.DeviceAttribute, _: cuda.abi.Device) callconv(.c) cuda.abi.Result { out.* = 0; return 0; }
++    fn copyLogits(dst: ?*anyopaque, _: cuda.abi.DevicePtr, n: usize) callconv(.c) cuda.abi.Result {
++        _ = dtoh_calls.fetchAdd(1, .monotonic);
++        const src = std.mem.sliceAsBytes(&active_logits);
++        @memcpy(@as([*]u8, @ptrCast(dst.?))[0..n], src[0..n]);
++        return 0;
++    }
++
++    fn deinit(self: *MockDraftHarness) void { _ = cuda.copy_source.keepDriver(&self.drv); }
++
++    fn bindFns(v: anytype, d: *const cuda.Driver) void {
++        const T = @TypeOf(v.*);
++        if (T == cuda.Function) { v.d = d; return; }
++        switch (@typeInfo(T)) {
++            .@"struct" => |info| inline for (info.field_names) |name| bindFns(&@field(v.*, name), d),
++            .array => for (v) |*elem| bindFns(elem, d),
++            else => {},
++        }
++    }
++
++    fn init(self: *MockDraftHarness, gpa: std.mem.Allocator, captured_rows: usize) void {
++        @memset(std.mem.asBytes(self), 0);
++        self.drv.api.cuMemcpyHtoDAsync_v2 = noopHtoD;
++        self.drv.api.cuLaunchKernel = noopLaunch;
++        self.drv.api.cuStreamSynchronize = noopSync;
++        self.drv.api.cuCtxSynchronize = noopCtxSync;
++        self.drv.api.cuMemHostAlloc = hostAlloc;
++        self.drv.api.cuMemFreeHost = hostFree;
++        self.drv.api.cuEventCreate = evCreate;
++        self.drv.api.cuEventRecord = evRecord;
++        self.drv.api.cuEventRecordWithFlags = evRecordFlags;
++        self.drv.api.cuEventQuery = evSyncOrQuery;
++        self.drv.api.cuEventSynchronize = evSyncOrQuery;
++        self.drv.api.cuEventDestroy_v2 = evSyncOrQuery;
++        self.drv.api.cuCtxGetDevice = ctxGetDev;
++        self.drv.api.cuDeviceGetAttribute = devGetAttr;
++        self.drv.api.cuMemcpyDtoH_v2 = copyLogits;
++
++        self.model.gpa = gpa;
++        self.model.t = .{
++            .hidden_size = 64, .intermediate_size = 128, .moe_intermediate_size = 32,
++            .num_hidden_layers = 1, .vocab_size = 32, .q_lora_rank = 8, .kv_lora_rank = 8,
++            .num_attention_heads = 4, .qk_nope_head_dim = 8, .qk_rope_head_dim = 8, .v_head_dim = 16,
++            .index_n_heads = 2, .index_head_dim = 8, .index_topk = 8, .indexer_types = &.{.full},
++        };
++        self.model.rt.gpa = gpa;
++        self.model.rt.d = &self.drv;
++        self.model.rt.stream = .{ .d = &self.drv, .handle = null };
++        self.model.sc.logits_f32 = .{ .d = &self.drv, .ptr = 256, .len = 32 * 4, .borrowed = true };
++        self.model.sc.hidden = .{ .d = &self.drv, .ptr = 256, .len = 4 * 64 * 2, .borrowed = true };
++        self.model.trunk.embed_bf16 = 256;
++        self.model.head = .{ .hc = undefined, .final_norm = .{ .bf16_ptr = 256, .f32_ptr = 256, .width = 64 }, .vocab_full = 32, .vocab_local = 32, .vocab_pad = 32, .lm_head_bf16 = 256 };
++        self.model.drafter = .{
++            .gpa = gpa,
++            .weights = .{
++                .blocks = &.{}, .block_size = 4, .mask_token_id = 0, .enable_hidden_correction = false,
++                .enorm = .{ .bf16_ptr = 256, .f32_ptr = 256, .width = 64 },
++                .hnorm = .{ .bf16_ptr = 256, .f32_ptr = 256, .width = 64 },
++                .final_norm = .{ .bf16_ptr = 256, .f32_ptr = 256, .width = 64 },
++                .fusion_gate_f32 = 256,
++                .eh_proj = .{ .bf16 = .{ .ptr = 256, .n = 64, .n_full = 64, .k = 128, .n_pad = 64, .k_pad = 128, .padded = false } },
++            },
++            .sc = undefined,
++        };
++        @memset(std.mem.asBytes(&self.model.drafter.?.sc), 0);
++        self.model.drafter.?.sc.ids_i32 = .{ .d = &self.drv, .ptr = 256, .len = 64, .borrowed = true };
++        self.model.drafter.?.sc.streams_0 = .{ .d = &self.drv, .ptr = 256, .len = 512, .borrowed = true };
++        self.model.drafter.?.sc.streams_1 = .{ .d = &self.drv, .ptr = 256, .len = 512, .borrowed = true };
++        self.model.drafter.?.sc.normalized = .{ .d = &self.drv, .ptr = 256, .len = 512, .borrowed = true };
++        self.model.drafter.?.sc.concat = .{ .d = &self.drv, .ptr = 256, .len = 512, .borrowed = true };
++        self.model.drafter.?.sc.delta_f32 = .{ .d = &self.drv, .ptr = 256, .len = 512, .borrowed = true };
++        self.model.drafter.?.sc.delta_bf16 = .{ .d = &self.drv, .ptr = 256, .len = 512, .borrowed = true };
++        self.model.drafter.?.sc.host_logits = &self.host_logits;
++        bindFns(&self.model.rt, &self.drv);
++        bindFns(&self.model.drafter.?.sc.dense_rows, &self.drv);
++
++        self.pools[0].capacity = 64;
++        self.anchors[0] = .{
++            .gpa = gpa, .num_blocks = 1, .max_rows = 4, .index_topk = 8, .hidden_size = 64,
++            .hidden_bf16 = .{ .d = &self.drv, .ptr = 256, .len = 256, .borrowed = true },
++            .recalled = &.{}, .captured_rows = captured_rows,
++        };
++        self.free[0] = false;
++        self.hb = .{
++            .gpa = gpa, .model = &self.model, .pools = &self.pools, .slot_anchors = &self.anchors,
++            .physical_cap = 64, .free = &self.free, .slot_last_logits = &.{}, .work_logits = &self.work_logits,
++            .sample_cands = &self.sample_cands, .window_costs_buf = undefined,
++        };
++    }
++};
++
++fn openPlanPair() !struct { pl0: tp.planlink.PlanLink, pl1: tp.planlink.PlanLink } {
++    const ls = try tp.bootstrap.testListener();
++    defer tp.sock.close(ls.fd);
++    const Peer = struct {
++        fn run(port: u16, out: *?tp.Bootstrap) void {
++            out.* = tp.Bootstrap.open(.{ .world = 2, .rank = 1, .link_port = port, .connect_timeout_ns = 5 * std.time.ns_per_s }) catch null;
++        }
++    };
++    var b1_opt: ?tp.Bootstrap = null;
++    const th = try std.Thread.spawn(.{}, Peer.run, .{ ls.port, &b1_opt });
++    var b0 = try tp.Bootstrap.acceptOn(ls.fd, 2, 5 * std.time.ns_per_s);
++    th.join();
++    var b1 = b1_opt orelse return error.ConnectFailed;
++    const pl0 = tp.planlink.PlanLink.init(0, 2, b0.releasePlan());
++    const pl1 = tp.planlink.PlanLink.init(1, 2, b1.releasePlan());
++    b0.close();
++    b1.close();
++    return .{ .pl0 = pl0, .pl1 = pl1 };
++}
++
++test "r2 finding 2: follower draft_propose obeys rank 0 null and explicit min_margin without reading follower env" {
++    defer _ = unsetenv("TF_HY4_DRAFT_MIN_MARGIN");
++    MockDraftHarness.active_logits = @splat(-5.0);
++    MockDraftHarness.active_logits[3] = 4.50;
++    MockDraftHarness.active_logits[7] = 4.00; // top-2 margin = 0.50
++
++    var h = try std.testing.allocator.create(MockDraftHarness);
++    defer std.testing.allocator.destroy(h);
++    h.init(std.testing.allocator, 1);
++    defer h.deinit();
++
++    var pair = try openPlanPair();
++    defer pair.pl0.close();
++    defer pair.pl1.close();
++    h.hb.plan_link = &pair.pl1;
++
++    // Follower env has TF_HY4_DRAFT_MIN_MARGIN=0.90 (> 0.50), while rank 0 sends min_margin = null ("none") and hold_cap = 3.
++    _ = setenv("TF_HY4_DRAFT_MIN_MARGIN", "0.90", 1);
++    MockDraftHarness.dtoh_calls.store(0, .monotonic);
++
++    const rule: cuda.sample.Rule = .{ .seed = 4242, .inv_t = 1.0 / 0.7, .top_p = 1.0, .near = 20.0, .min_log = -std.math.inf(f32), .top_k = 0 };
++    var buf: [12]i64 = undefined;
++    try pair.pl0.send(vocab_gather.encodeDraftPropose(0, 0, 10, 5, 3, rule, null, &buf));
++    try pair.pl0.send(&.{@intFromEnum(boundary.PlanOp.stop)});
++    try h.hb.followLoop();
++    // Follower must run all 3 draft readouts (ignoring its own 0.90 env) rather than cutting at step 0!
++    try std.testing.expectEqual(@as(usize, 3), MockDraftHarness.dtoh_calls.load(.monotonic));
++
++    // Conversely, when rank 0 explicitly sends min_margin = 0.90 (> 0.50), follower cuts at step 0 (1 readout).
++    var pair2 = try openPlanPair();
++    defer pair2.pl0.close();
++    defer pair2.pl1.close();
++    h.hb.plan_link = &pair2.pl1;
++    _ = unsetenv("TF_HY4_DRAFT_MIN_MARGIN");
++    MockDraftHarness.dtoh_calls.store(0, .monotonic);
++    try pair2.pl0.send(vocab_gather.encodeDraftPropose(0, 0, 10, 5, 3, rule, 0.90, &buf));
++    try pair2.pl0.send(&.{@intFromEnum(boundary.PlanOp.stop)});
++    try h.hb.followLoop();
++    try std.testing.expectEqual(@as(usize, 1), MockDraftHarness.dtoh_calls.load(.monotonic));
++}
++
++test "r2 finding 4: sampled draft_propose is allocation-free in sampler and non-NonFiniteLogits error aborts PlanLink" {
++    MockDraftHarness.active_logits = @splat(-3.0);
++    MockDraftHarness.active_logits[2] = 5.0;
++    MockDraftHarness.active_logits[9] = 4.4;
++    const rule: cuda.sample.Rule = .{ .seed = 1047648835052231172, .inv_t = 1.0 / 0.7, .top_p = 0.95, .near = 20.0, .min_log = -4.0, .top_k = 16 };
++    var ref_cands: [32]vocab_gather.SampleCand = undefined;
++    for (0..32) |step| {
++        const want = try cuda_backend.sampleRowF32(std.testing.allocator, &MockDraftHarness.active_logits, rule, 500 + step);
++        try std.testing.expectEqual(want, try vocab_gather.sampleRowF32InPlace(&ref_cands, &MockDraftHarness.active_logits, rule, 500 + step));
++    }
++    // Part A: FailingAllocator allowing only PlanLink's single frame_buf allocation (fail_index = 1) succeeds across 3 sampled draft steps.
++    var fail_after_frame = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 1 });
++    var h1 = try std.testing.allocator.create(MockDraftHarness);
++    defer std.testing.allocator.destroy(h1);
++    h1.init(fail_after_frame.allocator(), 1);
++    defer h1.deinit();
++    var pair1 = try openPlanPair();
++    defer { pair1.pl0.close(); pair1.pl1.close(); }
++    h1.hb.plan_link = &pair1.pl1;
++    var buf: [12]i64 = undefined;
++    try pair1.pl0.send(vocab_gather.encodeDraftPropose(0, 0, 8, 3, 3, rule, null, &buf));
++    try pair1.pl0.send(&.{@intFromEnum(boundary.PlanOp.stop)});
++    try h1.hb.followLoop();
++    // Part B: Non-NonFiniteLogits error inside follower draft_propose (BadDraftAnchor) aborts PlanLink so rank 0 sees immediate RST/EOF.
++    var h2 = try std.testing.allocator.create(MockDraftHarness);
++    defer std.testing.allocator.destroy(h2);
++    h2.init(std.testing.allocator, 0);
++    defer h2.deinit();
++    var pair2 = try openPlanPair();
++    defer { pair2.pl0.close(); pair2.pl1.close(); }
++    h2.hb.plan_link = &pair2.pl1;
++    try pair2.pl0.send(vocab_gather.encodeDraftPropose(0, 0, 8, 3, 3, rule, null, &buf));
++    try std.testing.expectError(error.BadDraftAnchor, h2.hb.followLoop());
++    try std.testing.expect(h2.hb.ring_broken and pair2.pl1.fds[0] == -1);
++    var one: [1]u8 = undefined;
++    try std.testing.expect(std.c.recv(pair2.pl0.fds[1], &one, 1, 0) <= 0);
++    // Part C: Rank 0 draft() non-NonFiniteLogits failure aborts PlanLink and marks ring_broken, while NonFiniteLogits leaves ring intact.
++    const lanes = @import("lanes");
++    var stream_s = try lanes.Stream.init(std.testing.allocator, .{ .id = "s0", .prompt = &.{ 1, 2 }, .max_new = 8 });
++    defer stream_s.deinit(std.testing.allocator);
++    var h3 = try std.testing.allocator.create(MockDraftHarness);
++    defer std.testing.allocator.destroy(h3);
++    h3.init(std.testing.allocator, 1);
++    defer h3.deinit();
++    var pair3 = try openPlanPair();
++    defer { pair3.pl0.close(); pair3.pl1.close(); }
++    h3.hb.plan_link = &pair3.pl0;
++    try h3.hb.lanes_map.put(std.testing.allocator, &stream_s, .{ .slot = 0, .len = 2, .anchor_row = 0, .last_logits = &h3.work_logits, .rule = rule });
++    defer h3.hb.lanes_map.deinit(std.testing.allocator);
++    var probe_buf: std.ArrayList(i64) = .empty;
++    defer probe_buf.deinit(std.testing.allocator);
++    MockDraftHarness.active_logits[5] = std.math.nan(f32);
++    const dreq: lanes.backend.DraftRequest = .{ .stream = &stream_s, .depth = 2, .position = 3, .follow = &.{7}, .rows = null, .start = 0 };
++    try std.testing.expectError(error.NonFiniteLogits, h3.hb.backend().vtable.draft(h3.hb.backend().ptr, &.{dreq}));
++    try std.testing.expect(!h3.hb.ring_broken and pair3.pl0.fds[1] >= 0);
++    try std.testing.expectEqual(@as(usize, 12), (try pair3.pl1.recvGrow(std.testing.allocator, &probe_buf)).len);
++    MockDraftHarness.active_logits[5] = 0.0;
++    h3.anchors[0].?.captured_rows = 0;
++    try std.testing.expectError(error.BadDraftAnchor, h3.hb.backend().vtable.draft(h3.hb.backend().ptr, &.{dreq}));
++    try std.testing.expect(h3.hb.ring_broken and pair3.pl0.fds[1] == -1);
++    _ = pair3.pl1.recvGrow(std.testing.allocator, &probe_buf) catch {};
++    const recv_res = pair3.pl1.recvGrow(std.testing.allocator, &probe_buf);
++    try std.testing.expect(std.meta.isError(recv_res));
++    try std.testing.expectError(error.BrokenTpRing, h3.hb.backend().vtable.draft(h3.hb.backend().ptr, &.{dreq}));
++}
 diff --git a/zig/src/families/hy4/vision_guard_test.zig b/zig/src/families/hy4/vision_guard_test.zig
 new file mode 100644
-index 0000000000000000000000000000000000000000..670f7cb0275a2d5d3bc66150b3718ef9253f3880
+index 0000000000000000000000000000000000000000..6d565ab76ece7d3d1b769c731d612cc424d012a6
 --- /dev/null
 +++ b/zig/src/families/hy4/vision_guard_test.zig
-@@ -0,0 +1,294 @@
+@@ -0,0 +1,295 @@
 +//! Host unit tests for forward/backend invariants, RowPositionGuard scope, text-only vision parity, and refusals.
 +const std = @import("std");
 +const cuda = @import("cuda");
@@ -30667,6 +31022,7 @@ index 0000000000000000000000000000000000000000..670f7cb0275a2d5d3bc66150b3718ef9
 +
 +test {
 +    _ = @import("vision_contract_test.zig");
++    _ = @import("vocab_gather.zig");
 +}
 diff --git a/zig/src/families/hy4/vision_image.zig b/zig/src/families/hy4/vision_image.zig
 new file mode 100644
@@ -31956,6 +32312,490 @@ index 0000000000000000000000000000000000000000..b014b18fcfac199a7bed5c803d7db88e
 +    try std.testing.expectEqualStrings("/sidecar/vit", try resolveVisionTargetFrom(FakeEnv{ .raw = "/sidecar/vit" }, "/models/hy4"));
 +    try std.testing.expectError(error.InvalidEnvironment, resolveVisionTargetFrom(FakeEnv{ .raw = "/bad\x07dir" }, "/models/hy4"));
 +}
+diff --git a/zig/src/families/hy4/vocab_gather.zig b/zig/src/families/hy4/vocab_gather.zig
+new file mode 100644
+index 0000000000000000000000000000000000000000..27aafd52b13c66d49c8c83b228ddd09baa1b164e
+--- /dev/null
++++ b/zig/src/families/hy4/vocab_gather.zig
+@@ -0,0 +1,478 @@
++//! Device-side TP=4 vocabulary all-gather (`relay.gather` / `ncclAllGather`) and follower draft-rule replication.
++//! Replaces chunked TCP `Bootstrap.allGather` (`85` x `16 KiB` star barriers + `5` broadcasts per 5-draft round)
++//! with 1 device collective on verify and 1 per draft readout while keeping `sampleRowF32` draws bit-identical.
++//! `TF_HY4_VOCAB_BOOTSTRAP=1` (agreed in run tags across all 4 ranks) switches ONLY vocabulary transport back to
++//! `gatherVocabOnBootstrap` over TCP; follower `PlanOp.draft_propose` rule replication stays active.
++const std = @import("std");
++const cuda = @import("cuda");
++const tp = @import("tp");
++const boundary = @import("boundary.zig");
++const resident = @import("resident.zig");
++
++const htp = cuda.hy4_tp;
++
++pub const SampleCand = struct {
++    id: u32,
++    logit: f32,
++    prob: f32 = 0,
++    fn more(_: void, a: SampleCand, b: SampleCand) bool {
++        return if (a.logit != b.logit) a.logit > b.logit else a.id < b.id;
++    }
++};
++
++pub fn sampleRowF32InPlace(cands_buf: []SampleCand, logits: []const f32, rule: cuda.sample.Rule, pos: u64) error{ EmptyVocab, NonFiniteLogits }!u32 {
++    if (logits.len == 0 or cands_buf.len < logits.len) return error.EmptyVocab;
++    var max_logit: f32 = -std.math.inf(f32);
++    for (logits) |v| {
++        if (!std.math.isFinite(v)) return error.NonFiniteLogits;
++        if (v > max_logit) max_logit = v;
++    }
++    const k_lim: usize = if (rule.top_k > 0) @as(usize, @min(@as(usize, rule.top_k), logits.len)) else logits.len;
++    const floor = max_logit - rule.near / @max(rule.inv_t, 1e-6);
++    var n_cands: usize = 0;
++    for (logits, 0..) |v, id| if (v >= floor) {
++        cands_buf[n_cands] = .{ .id = @intCast(id), .logit = v };
++        n_cands += 1;
++    };
++    if (n_cands == 0) return resident.argmaxF32(logits);
++    std.mem.sort(SampleCand, cands_buf[0..n_cands], {}, SampleCand.more);
++    if (n_cands > k_lim) n_cands = k_lim;
++
++    const top_scaled = (cands_buf[0].logit - max_logit) * rule.inv_t;
++    var sum: f32 = 0;
++    var kept: usize = 0;
++    for (cands_buf[0..n_cands]) |c| {
++        const scaled = (c.logit - max_logit) * rule.inv_t;
++        if (kept > 0 and scaled - top_scaled < rule.min_log) break;
++        const p = @exp(scaled);
++        cands_buf[kept] = .{ .id = c.id, .logit = c.logit, .prob = p };
++        sum += p;
++        kept += 1;
++    }
++    var active = cands_buf[0..@as(usize, @max(kept, @as(usize, 1)))];
++
++    if (rule.top_p > 0 and rule.top_p < 1.0 and sum > 0) {
++        var acc: f32 = 0;
++        var p_kept: usize = 0;
++        for (active) |c| {
++            acc += c.prob / sum;
++            p_kept += 1;
++            if (acc >= rule.top_p) break;
++        }
++        active = active[0..@as(usize, @max(p_kept, @as(usize, 1)))];
++        sum = 0;
++        for (active) |c| sum += c.prob;
++    }
++    if (!(sum > 0)) return active[0].id;
++
++    var mix: u64 = rule.seed ^ (pos *% 0x9E3779B97F4A7C15);
++    mix = (mix ^ (mix >> 30)) *% 0xBF58476D1CE4E5B9;
++    mix = (mix ^ (mix >> 27)) *% 0x94D049BB133111EB;
++    mix ^= mix >> 31;
++    const u = @as(f32, @floatFromInt(mix >> 40)) * (1.0 / 16777216.0) * sum;
++    var walk: f32 = 0;
++    for (active) |c| {
++        walk += c.prob;
++        if (u <= walk) return c.id;
++    }
++    return active[active.len - 1].id;
++}
++
++pub fn sampleRowF32(gpa: std.mem.Allocator, logits: []const f32, rule: cuda.sample.Rule, pos: u64) !u32 {
++    if (logits.len == 0) return error.EmptyVocab;
++    const buf = try gpa.alloc(SampleCand, logits.len);
++    defer gpa.free(buf);
++    return sampleRowF32InPlace(buf, logits, rule, pos);
++}
++
++pub fn shouldAbortOnDraftError(err: anyerror) bool {
++    return err != error.NonFiniteLogits;
++}
++
++fn ensureStageF32(tps: *boundary.TpSession, need_elems: usize) ![]f32 {
++    if (tps.vocab_stage.items.len < need_elems) {
++        try tps.vocab_stage.resize(std.heap.c_allocator, need_elems);
++    }
++    return tps.vocab_stage.items[0..need_elems];
++}
++
++pub fn gatherDevice(
++    tps: *boundary.TpSession,
++    gpa: std.mem.Allocator,
++    d: *const cuda.Driver,
++    stream: cuda.Stream,
++    dev_local_ptr: u64,
++    dev_gathered: cuda.DeviceBuffer,
++    rows: usize,
++    vocab_stride: usize,
++    vocab_full: usize,
++    out_full: []f32,
++) !void {
++    if (rows == 0 or vocab_stride == 0 or vocab_full == 0 or out_full.len != rows * vocab_full or
++        htp.world * vocab_stride < vocab_full or dev_local_ptr == 0)
++    {
++        return error.BadHy4VocabGather;
++    }
++    const one_row_all_bytes = htp.world * vocab_stride * @sizeOf(f32);
++    if (dev_gathered.ptr == 0 or dev_gathered.len < one_row_all_bytes or boundary.envFlag("TF_HY4_VOCAB_BOOTSTRAP")) {
++        const local_f32 = try ensureStageF32(tps, rows * vocab_stride);
++        try tps.boundary.finish(stream);
++        try cuda.memory.download(d, dev_local_ptr, std.mem.sliceAsBytes(local_f32));
++        return boundary.gatherVocabOnBootstrap(&tps.bootstrap, gpa, local_f32, rows, vocab_stride, vocab_full, out_full);
++    }
++    if (tps.boundary.comm == null) return error.Hy4CommunicatorClosed;
++
++    const max_batch_rows = dev_gathered.len / one_row_all_bytes;
++    var row_off: usize = 0;
++    while (row_off < rows) {
++        const batch_rows = @min(max_batch_rows, rows - row_off);
++        const src_ptr = dev_local_ptr + row_off * vocab_stride * @sizeOf(f32);
++        const rank_elems = batch_rows * vocab_stride;
++        const rank_bytes = rank_elems * @sizeOf(f32);
++
++        if (tps.boundary.relay) |r| {
++            try r.check(r.ctx);
++            if (r.fits(r.ctx, rank_bytes) and (src_ptr | dev_gathered.ptr | rank_bytes) % 16 == 0) {
++                try r.gather(r.ctx, stream.handle, src_ptr, dev_gathered.ptr, rank_bytes);
++            } else {
++                try tps.nccl_lib.check(
++                    tps.nccl_lib.api.ncclAllGather(src_ptr, dev_gathered.ptr, rank_elems, .f32, tps.boundary.comm, stream.handle),
++                    "Hy4 vocab all-gather",
++                );
++            }
++        } else {
++            try tps.nccl_lib.check(
++                tps.nccl_lib.api.ncclAllGather(src_ptr, dev_gathered.ptr, rank_elems, .f32, tps.boundary.comm, stream.handle),
++                "Hy4 vocab all-gather",
++            );
++        }
++        try tps.boundary.finish(stream);
++
++        const dst_slice = out_full[row_off * vocab_full ..][0 .. batch_rows * vocab_full];
++        if (batch_rows == 1 and htp.world * vocab_stride == vocab_full) {
++            try cuda.memory.download(d, dev_gathered.ptr, std.mem.sliceAsBytes(dst_slice));
++        } else {
++            const stage = std.mem.sliceAsBytes(try ensureStageF32(tps, batch_rows * htp.world * vocab_stride));
++            try cuda.memory.download(d, dev_gathered.ptr, stage);
++            const views: [htp.world][]const u8 = .{
++                stage[0 * rank_bytes ..][0..rank_bytes],
++                stage[1 * rank_bytes ..][0..rank_bytes],
++                stage[2 * rank_bytes ..][0..rank_bytes],
++                stage[3 * rank_bytes ..][0..rank_bytes],
++            };
++            try boundary.interleaveVocabStripes(&views, batch_rows, vocab_stride, vocab_full, dst_slice);
++        }
++        row_off += batch_rows;
++    }
++}
++
++pub const DraftPlan = struct {
++    slot: usize,
++    anchor_row: usize,
++    pos: usize,
++    bonus: u32,
++    hold_cap: usize,
++    rule: ?cuda.sample.Rule,
++    min_margin: ?f32,
++};
++
++pub fn encodeDraftPropose(
++    slot: usize,
++    anchor_row: usize,
++    pos: usize,
++    bonus: u32,
++    hold_cap: usize,
++    rule_opt: ?cuda.sample.Rule,
++    min_margin: ?f32,
++    buf: *[12]i64,
++) []const i64 {
++    const mm_bits: u32 = if (min_margin) |mm| @bitCast(mm) else 0;
++    buf[0..8].* = .{
++        @intFromEnum(boundary.PlanOp.draft_propose),
++        @intCast(slot),
++        @intCast(anchor_row),
++        @intCast(pos),
++        @intCast(bonus),
++        @intCast(hold_cap),
++        @intFromBool(rule_opt == null),
++        mm_bits,
++    };
++    if (rule_opt) |rule| {
++        buf[8] = @bitCast(rule.seed);
++        buf[9] = @bitCast([2]u32{ @bitCast(rule.inv_t), @bitCast(rule.top_p) });
++        buf[10] = @bitCast([2]u32{ @bitCast(rule.near), @bitCast(rule.min_log) });
++        buf[11] = @bitCast([2]u32{ rule.top_k, rule.pad });
++        return buf[0..12];
++    }
++    return buf[0..8];
++}
++
++pub fn decodeDraftPropose(msg: []const i64, pools_len: usize, max_window: usize) !DraftPlan {
++    if (msg.len != 8 and msg.len != 12) return error.Protocol;
++    if (msg[1] < 0 or msg[2] < 0 or msg[3] < 0 or msg[4] < 0 or msg[4] > std.math.maxInt(u32) or msg[5] < 0)
++        return error.Protocol;
++    const slot: usize = @intCast(msg[1]);
++    const hold_cap: usize = @intCast(msg[5]);
++    if (slot >= pools_len or hold_cap >= max_window) return error.Protocol;
++    const is_greedy = msg[6] != 0;
++    if (is_greedy != (msg.len == 8)) return error.Protocol;
++    const mm_bits: u32 = @truncate(@as(u64, @bitCast(msg[7])));
++    const rule: ?cuda.sample.Rule = if (is_greedy) null else blk: {
++        const w9: [2]u32 = @bitCast(msg[9]);
++        const w10: [2]u32 = @bitCast(msg[10]);
++        const w11: [2]u32 = @bitCast(msg[11]);
++        break :blk .{
++            .seed = @bitCast(msg[8]),
++            .inv_t = @bitCast(w9[0]),
++            .top_p = @bitCast(w9[1]),
++            .near = @bitCast(w10[0]),
++            .min_log = @bitCast(w10[1]),
++            .top_k = w11[0],
++            .pad = w11[1],
++        };
++    };
++    return .{
++        .slot = slot,
++        .anchor_row = @intCast(msg[2]),
++        .pos = @intCast(msg[3]),
++        .bonus = @intCast(msg[4]),
++        .hold_cap = hold_cap,
++        .rule = rule,
++        .min_margin = if (mm_bits == 0) null else @bitCast(mm_bits),
++    };
++}
++
++pub const FollowerPickCtx = struct {
++    gpa: std.mem.Allocator = std.heap.c_allocator,
++    cands: []SampleCand = &.{},
++    rule: ?cuda.sample.Rule,
++
++    pub fn pick(raw: *anyopaque, logits: []const f32, pos: u64) !u32 {
++        const c: *const @This() = @ptrCast(@alignCast(raw));
++        const r = c.rule orelse return 0;
++        if (c.cands.len >= logits.len) return sampleRowF32InPlace(c.cands, logits, r, pos);
++        return sampleRowF32(c.gpa, logits, r, pos);
++    }
++};
++
++test "gatherVocabDevice matches gatherVocabOnBootstrap and sampleRowF32 bit-for-bit across 1-row relay, 6-row NCCL, tiled, and fallback paths" {
++    const gpa = std.testing.allocator;
++    const Mock = struct {
++        var dev_mem: []u8 = &.{};
++        var nccl_calls: usize = 0;
++        var relay_calls: usize = 0;
++        var relay_cap: usize = 196_608;
++
++        fn ctxGetDev(out: *cuda.abi.Device) callconv(.c) cuda.abi.Result {
++            out.* = 0;
++            return 0;
++        }
++        fn devGetAttr(out: *c_int, _: cuda.abi.DeviceAttribute, _: cuda.abi.Device) callconv(.c) cuda.abi.Result {
++            out.* = 0; // discrete download path -> direct cuMemcpyDtoH_v2
++            return 0;
++        }
++        fn sync(_: cuda.abi.Stream) callconv(.c) cuda.abi.Result {
++            return 0;
++        }
++        fn dtoh(dst: ?*anyopaque, src: cuda.abi.DevicePtr, n: usize) callconv(.c) cuda.abi.Result {
++            const off: usize = @intCast(src);
++            @memcpy(@as([*]u8, @ptrCast(dst.?))[0..n], dev_mem[off .. off + n]);
++            return 0;
++        }
++        fn allGather(send_ptr: cuda.abi.DevicePtr, recv_ptr: cuda.abi.DevicePtr, count: usize, dtype: cuda.nccl.DataType, _: cuda.nccl.Comm, _: cuda.abi.Stream) callconv(.c) cuda.nccl.Result {
++            if (dtype != .f32) return 4;
++            nccl_calls += 1;
++            const rank_bytes = count * @sizeOf(f32);
++            const s_off: usize = @intCast(send_ptr);
++            const r_off: usize = @intCast(recv_ptr);
++            // Simulate all 4 ranks' stripes sitting contiguously starting at s_off in mock device memory:
++            for (0..htp.world) |rk| {
++                const rk_src = s_off + rk * (dev_mem.len / 8);
++                @memcpy(dev_mem[r_off + rk * rank_bytes ..][0..rank_bytes], dev_mem[rk_src..][0..rank_bytes]);
++            }
++            return 0;
++        }
++        fn asyncErr(_: cuda.nccl.Comm, res: *cuda.nccl.Result) callconv(.c) cuda.nccl.Result {
++            res.* = 0;
++            return 0;
++        }
++        fn errStr(_: cuda.nccl.Result) callconv(.c) ?[*:0]const u8 {
++            return "ok";
++        }
++        fn relayFits(_: *anyopaque, bytes: usize) bool {
++            return bytes <= relay_cap;
++        }
++        fn relayGather(_: *anyopaque, s: cuda.abi.Stream, mine: u64, all: u64, bytes: usize) anyerror!void {
++            relay_calls += 1;
++            _ = allGather(mine, all, bytes / 4, .f32, null, s);
++            nccl_calls -= 1;
++        }
++        fn relayCheck(_: *anyopaque) anyerror!void {}
++        fn relayAbort(_: *anyopaque) void {}
++        fn relayDeinit(_: *anyopaque) void {}
++        fn relayFold(_: *anyopaque, _: cuda.abi.Stream, _: u64, _: u64, _: usize, _: u64, _: u64, _: u64) anyerror!bool {
++            return false;
++        }
++    };
++
++    const stride: usize = 30_208;
++    const full_v: usize = 120_832;
++    const max_r: usize = 6;
++    const slot_span: usize = 8 << 20;
++    Mock.dev_mem = try gpa.alloc(u8, 8 * slot_span);
++    defer gpa.free(Mock.dev_mem);
++    @memset(Mock.dev_mem, 0);
++
++    const base_dev: u64 = 256;
++    // Populate 4 ranks' [6, 30208] device stripes starting at base_dev + rk * slot_span:
++    for (0..htp.world) |rk| {
++        const stripe_f32: []f32 = @alignCast(std.mem.bytesAsSlice(f32, Mock.dev_mem[base_dev + rk * slot_span ..][0 .. max_r * stride * 4]));
++        for (0..max_r) |r| for (0..stride) |col| {
++            const gid = rk * stride + col;
++            var val: f32 = -12.0 + @as(f32, @floatFromInt((gid * 17 + r * 31) % 1000)) * 0.008;
++            if (gid == (r * 25_000 + 777) % full_v) val = 18.5;
++            if (gid == (r * 25_000 + 35_001) % full_v) val = 17.9;
++            if (gid == (r * 25_000 + 99_999) % full_v) val = 17.2;
++            stripe_f32[r * stride + col] = val;
++        };
++    }
++
++    var drv: cuda.Driver = undefined;
++    drv.api.cuCtxGetDevice = Mock.ctxGetDev;
++    drv.api.cuDeviceGetAttribute = Mock.devGetAttr;
++    drv.api.cuStreamSynchronize = Mock.sync;
++    drv.api.cuMemcpyDtoH_v2 = Mock.dtoh;
++    const stream: cuda.Stream = .{ .d = &drv, .handle = null };
++
++    var nlib: cuda.nccl.Library = undefined;
++    nlib.api.ncclAllGather = Mock.allGather;
++    nlib.api.ncclCommGetAsyncError = Mock.asyncErr;
++    nlib.api.ncclGetErrorString = Mock.errStr;
++    var dummy_comm: u8 = 1;
++    var dummy_relay: u8 = 2;
++
++    var tps: boundary.TpSession = .{
++        .rank = .zero,
++        .rank_idx = 0,
++        .nccl_lib = &nlib,
++        .bootstrap = .{ .rank = 0, .world = 4, .timeout_ns = std.time.ns_per_s },
++        .boundary = .{
++            .lib = &nlib,
++            .comm = @ptrCast(&dummy_comm),
++            .rank = .zero,
++            .relay = .{
++                .ctx = &dummy_relay,
++                .fits = Mock.relayFits,
++                .gather = Mock.relayGather,
++                .check = Mock.relayCheck,
++                .abort = Mock.relayAbort,
++                .deinit = Mock.relayDeinit,
++                .foldWrite = Mock.relayFold,
++            },
++        },
++        .load_timeout_ns = std.time.ns_per_s,
++    };
++    defer tps.vocab_stage.deinit(std.heap.c_allocator);
++
++    const gathered_dev: cuda.DeviceBuffer = .{ .d = &drv, .ptr = 4 * slot_span, .len = 4 * max_r * stride * 4, .borrowed = true };
++
++    const ref_full = try gpa.alloc(f32, max_r * full_v);
++    defer gpa.free(ref_full);
++    const rb6 = max_r * stride * 4;
++    const views6: [4][]const u8 = .{
++        Mock.dev_mem[base_dev + 0 * slot_span ..][0..rb6],
++        Mock.dev_mem[base_dev + 1 * slot_span ..][0..rb6],
++        Mock.dev_mem[base_dev + 2 * slot_span ..][0..rb6],
++        Mock.dev_mem[base_dev + 3 * slot_span ..][0..rb6],
++    };
++    try boundary.interleaveVocabStripes(&views6, max_r, stride, full_v, ref_full);
++
++    const got = try gpa.alloc(f32, max_r * full_v);
++    defer gpa.free(got);
++    try std.testing.expectError(error.BadHy4VocabGather, tps.gatherVocabDevice(gpa, &drv, stream, 0, gathered_dev, 1, stride, full_v, got[0..full_v]));
++
++    // 1. 1-row draft readout (120,832 B <= 196,608 B relay slot): uses relay.gather + direct out_full download (0 staging alloc!).
++    Mock.nccl_calls = 0;
++    Mock.relay_calls = 0;
++    try tps.gatherVocabDevice(gpa, &drv, stream, base_dev, gathered_dev, 1, stride, full_v, got[0..full_v]);
++    try std.testing.expectEqual(@as(usize, 1), Mock.relay_calls);
++    try std.testing.expectEqual(@as(usize, 0), Mock.nccl_calls);
++    try std.testing.expectEqual(@as(usize, 0), tps.vocab_stage.items.len);
++    try std.testing.expectEqualSlices(f32, ref_full[0..full_v], got[0..full_v]);
++
++    // 2. 6-row verify readout (724,992 B > 196,608 B relay slot): uses 1 ncclAllGather + reusable staging buffer!
++    try tps.gatherVocabDevice(gpa, &drv, stream, base_dev, gathered_dev, max_r, stride, full_v, got);
++    try std.testing.expectEqual(@as(usize, 1), Mock.relay_calls);
++    try std.testing.expectEqual(@as(usize, 1), Mock.nccl_calls);
++    try std.testing.expectEqual(@as(usize, 4 * max_r * stride), tps.vocab_stage.items.len);
++    const stage_ptr_first = tps.vocab_stage.items.ptr;
++    try std.testing.expectEqualSlices(f32, ref_full, got);
++
++    // Second 6-row verify reuses exact same staging buffer with zero reallocation, and sampleRowF32 picks match bit-for-bit:
++    @memset(got, 0);
++    try tps.gatherVocabDevice(gpa, &drv, stream, base_dev, gathered_dev, max_r, stride, full_v, got);
++    try std.testing.expectEqual(stage_ptr_first, tps.vocab_stage.items.ptr);
++    const rule07: cuda.sample.Rule = .{ .seed = 1047648835052231172, .inv_t = 1.0 / 0.7, .top_p = 1.0, .near = 20.0, .min_log = -std.math.inf(f32), .top_k = 0 };
++    for (0..max_r) |r| {
++        const p_ref = try sampleRowF32(gpa, ref_full[r * full_v ..][0..full_v], rule07, 66 + r);
++        const p_got = try sampleRowF32(gpa, got[r * full_v ..][0..full_v], rule07, 66 + r);
++        try std.testing.expectEqual(p_ref, p_got);
++    }
++
++    // 3. Tiled gather when dev_gathered fits only 2 rows at a time (rows = 5 -> 2 + 2 + 1 = 3 collectives):
++    Mock.nccl_calls = 0;
++    Mock.relay_calls = 0;
++    const small_gathered: cuda.DeviceBuffer = .{ .d = &drv, .ptr = 4 * slot_span, .len = 4 * 2 * stride * 4, .borrowed = true };
++    @memset(got, 0);
++    try tps.gatherVocabDevice(gpa, &drv, stream, base_dev, small_gathered, 5, stride, full_v, got[0 .. 5 * full_v]);
++    // 2-row batches (241,664 B > 196,608 B) use ncclAllGather (2x); final 1-row batch (120,832 B) uses relay.gather (1x)!
++    try std.testing.expectEqual(@as(usize, 2), Mock.nccl_calls);
++    try std.testing.expectEqual(@as(usize, 1), Mock.relay_calls);
++    try std.testing.expectEqualSlices(f32, ref_full[0 .. 5 * full_v], got[0 .. 5 * full_v]);
++}
++
++test "encodeDraftPropose and decodeDraftPropose replicate sampled Rule bit-for-bit across ranks and reject malformed frames" {
++    const gpa = std.testing.allocator;
++    var buf: [12]i64 = undefined;
++
++    // 1. Greedy draft frame stays 8 words and decodes rule = null:
++    const g_msg = encodeDraftPropose(0, 3, 66, 42, 5, null, null, &buf);
++    try std.testing.expectEqual(@as(usize, 8), g_msg.len);
++    const g_dec = try decodeDraftPropose(g_msg, 2, 16);
++    try std.testing.expectEqual(@as(usize, 0), g_dec.slot);
++    try std.testing.expectEqual(@as(usize, 3), g_dec.anchor_row);
++    try std.testing.expectEqual(@as(usize, 66), g_dec.pos);
++    try std.testing.expectEqual(@as(u32, 42), g_dec.bonus);
++    try std.testing.expectEqual(@as(usize, 5), g_dec.hold_cap);
++    try std.testing.expect(g_dec.rule == null and g_dec.min_margin == null);
++
++    // 2. Sampled draft frame carries 12 words, round-trips Rule + min_margin bit-for-bit, and matches rank-0 sampleRowF32:
++    const rule: cuda.sample.Rule = .{ .seed = 0x51a9_2026_1123_0707, .inv_t = 1.0 / 0.7, .top_p = 0.95, .near = 20.0, .min_log = -3.5, .top_k = 40 };
++    const s_msg = encodeDraftPropose(1, 2, 128, 999, 6, rule, 0.75, &buf);
++    try std.testing.expectEqual(@as(usize, 12), s_msg.len);
++    const s_dec = try decodeDraftPropose(s_msg, 2, 16);
++    try std.testing.expectEqual(rule, s_dec.rule.?);
++    try std.testing.expectEqual(@as(?f32, 0.75), s_dec.min_margin);
++
++    var logits: [256]f32 = undefined;
++    var cands: [256]SampleCand = undefined;
++    for (&logits, 0..) |*v, i| v.* = @sin(@as(f32, @floatFromInt(i)) * 0.37) * 6.0;
++    var fctx: FollowerPickCtx = .{ .gpa = std.testing.failing_allocator, .cands = &cands, .rule = s_dec.rule };
++    for (0..32) |step| {
++        const want = try sampleRowF32(gpa, &logits, rule, 200 + step);
++        const got = try FollowerPickCtx.pick(&fctx, &logits, 200 + step);
++        try std.testing.expectEqual(want, got);
++    }
++    logits[17] = std.math.nan(f32);
++    try std.testing.expectError(error.NonFiniteLogits, FollowerPickCtx.pick(&fctx, &logits, 300));
++
++    // 3. Protocol boundary rejections:
++    try std.testing.expectError(error.Protocol, decodeDraftPropose(s_msg[0..7], 2, 16));
++    try std.testing.expectError(error.Protocol, decodeDraftPropose(s_msg[0..9], 2, 16));
++    try std.testing.expectError(error.Protocol, decodeDraftPropose(s_msg[0..8], 2, 16)); // is_greedy=false but len=8
++    var bad_g = buf;
++    _ = encodeDraftPropose(0, 0, 10, 1, 4, null, null, &bad_g);
++    try std.testing.expectError(error.Protocol, decodeDraftPropose(&bad_g, 2, 16)); // is_greedy=true but len=12
++    try std.testing.expectError(error.Protocol, decodeDraftPropose(g_msg, 0, 16)); // slot out of bounds
++    try std.testing.expectError(error.Protocol, decodeDraftPropose(g_msg, 2, 5)); // hold_cap >= max_window
++}
 diff --git a/zig/src/families/hy4/weights.zig b/zig/src/families/hy4/weights.zig
 new file mode 100644
 index 0000000000000000000000000000000000000000..ca91757cdc81c2fa0f96e32f80f2227ec3435e60
@@ -32615,10 +33455,10 @@ index 0000000000000000000000000000000000000000..7dd00ff98d324cb86bca34b227c5a26f
 +}
 diff --git a/zig/src/families/hy4/window_bench.zig b/zig/src/families/hy4/window_bench.zig
 new file mode 100644
-index 0000000000000000000000000000000000000000..0796507698b086c48e9ea3be5302b82053629481
+index 0000000000000000000000000000000000000000..8813a589c796e5c118eb4fd12d0702bd0ff4876e
 --- /dev/null
 +++ b/zig/src/families/hy4/window_bench.zig
-@@ -0,0 +1,397 @@
+@@ -0,0 +1,394 @@
 +//! Interleaved multi-width target verify benchmark (`--bench-window`, `--bench-widths 1,2,3,7`),
 +//! per-part synchronized 4-rank decode split (`--bench-parts` across trunk, experts, attention, index, head, and TP),
 +//! A/B `TF_HY4_GREEDY_FULL_GATHER=1` toggle, and live `CostParams` table calibration for adaptive draft depth.
@@ -32704,12 +33544,9 @@ index 0000000000000000000000000000000000000000..0796507698b086c48e9ea3be5302b820
 +        if (model.tp_sess) |sess| try sess.boundary.finish(model.rt.stream) else try model.rt.stream.synchronize();
 +        const tg0 = nowNs(model.io);
 +        if (model.tp_sess) |tps| {
-+            const local_f32 = try model.gpa.alloc(f32, rows * hd.vocab_pad);
-+            defer model.gpa.free(local_f32);
 +            const full_f32 = try model.gpa.alloc(f32, rows * hd.vocab_full);
 +            defer model.gpa.free(full_f32);
-+            try cuda.memory.download(model.rt.d, logits, std.mem.sliceAsBytes(local_f32));
-+            try tps.gatherVocabLogits(model.gpa, model.rt.stream, local_f32, rows, hd.vocab_pad, hd.vocab_full, full_f32);
++            try tps.gatherVocabDevice(model.gpa, model.rt.d, model.rt.stream, logits, model.sc.tp_gathered, rows, hd.vocab_pad, hd.vocab_full, full_f32);
 +            for (0..rows) |r| _ = try resident.argmaxF32(full_f32[r * hd.vocab_full ..][0..hd.vocab_full]);
 +        } else {
 +            const full_f32 = try model.gpa.alloc(f32, rows * hd.vocab_full);

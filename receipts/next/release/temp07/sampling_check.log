@@ -1,0 +1,16 @@
+2026-11-23T07:07:15Z warm-up: HTTP 200, finish length, 32 tokens (32 reasoning), 44.49 tok/s
+2026-11-23T07:07:16Z prose greedy run 1: HTTP 200, finish length, 2048 tokens (2048 reasoning), 24.02 tok/s
+2026-11-23T07:08:42Z prose default run 1: HTTP 200, finish length, 2048 tokens (2048 reasoning), 16.8 tok/s
+2026-11-23T07:10:45Z prose greedy run 2: HTTP 200, finish length, 2048 tokens (2048 reasoning), 23.96 tok/s
+2026-11-23T07:12:10Z prose default run 2: HTTP 200, finish length, 2048 tokens (2048 reasoning), 15.44 tok/s
+2026-11-23T07:14:24Z prose greedy run 3: HTTP 200, finish length, 2048 tokens (2048 reasoning), 23.93 tok/s
+2026-11-23T07:15:50Z prose default run 3: HTTP 200, finish length, 2048 tokens (2048 reasoning), 15.88 tok/s
+2026-11-23T07:17:59Z code greedy run 1: HTTP 200, finish length, 2048 tokens (2048 reasoning), 25.99 tok/s
+2026-11-23T07:19:18Z code default run 1: HTTP 200, finish length, 2048 tokens (2048 reasoning), 16.25 tok/s
+2026-11-23T07:21:25Z code greedy run 2: HTTP 200, finish length, 2048 tokens (2048 reasoning), 25.96 tok/s
+2026-11-23T07:22:44Z code default run 2: HTTP 200, finish length, 2048 tokens (2048 reasoning), 15.48 tok/s
+2026-11-23T07:24:57Z code greedy run 3: HTTP 200, finish length, 2048 tokens (2048 reasoning), 25.98 tok/s
+2026-11-23T07:26:16Z code default run 3: HTTP 200, finish length, 2048 tokens (2048 reasoning), 16.2 tok/s
+2026-11-23T07:28:23Z finding 6, budget: HTTP 200, finish length, 8192 tokens (4097 reasoning), 16.63 tok/s
+2026-11-23T07:36:36Z finding 6, none: HTTP 200, finish length, 8192 tokens (8192 reasoning), 15.91 tok/s
+2026-11-23T07:45:12Z wrote ~/hy4/temp07-out/sampling_check.json; all requests answered: True

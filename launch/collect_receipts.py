@@ -84,8 +84,10 @@ RE_CUDA_STARTUP = re.compile(
     r"of\s+(?P<free_after_reserve_gib>[0-9.]+)\s+GiB left after a\s+(?P<reserve_gib>[0-9.]+)\s+GiB reserve"
 )
 
+# Its "sampling:" part is the server's defaults for a request that sends none ("greedy", or name-value pairs).
 RE_SERVING = re.compile(
     r"\[tensorfold\]\s+serving\s+(?P<model_id>\S+)\s+at\s+(?P<url>\S+)\s+\("
+    r"(?:sampling:\s*(?P<sampling>[^;)]*);\s*)?"
     r"[^)]*drafts:\s*(?P<drafts>\w+);\s*context:\s*(?P<context>\d+);\s*loaded in\s+(?P<serve_load_s>[0-9.]+)s\)"
 )
 
@@ -180,6 +182,8 @@ def parse_rank_log(path: Path) -> dict:
     ms = RE_SERVING.search(text)
     if ms:
         info["model_id"] = ms.group("model_id")
+        if ms.group("sampling"):
+            info["sampling"] = ms.group("sampling").strip()
         info["drafts"] = ms.group("drafts")
         info["serve_context"] = int(ms.group("context"))
         info["serve_load_s"] = float(ms.group("serve_load_s"))
@@ -470,7 +474,7 @@ def main() -> int:
             "NCCL_NET", "NCCL_IB_HCA", "NCCL_IB_GID_INDEX",
             "NCCL_IB_SUBNET_AWARE_ROUTING", "NCCL_ALGO", "NCCL_PROTO",
             "NCCL_MIN_NCHANNELS", "NCCL_MAX_NCHANNELS",
-            "NCCL_CUMEM_ENABLE", "NCCL_RUNTIME_CONNECT", "TIMED_RUN", "SERVE_THINKING_BUDGET",
+            "NCCL_CUMEM_ENABLE", "NCCL_RUNTIME_CONNECT", "TIMED_RUN", "SERVE_THINKING_BUDGET", "SERVE_TEMPERATURE",
             "SERVE_MODEL_NAME", "PARTS_ROOT",
             "TENSORFOLD_BIN", "TF_HY4_FAST_PREFILL", "TF_HY4_PREFILL_AR", "TF_HY4_FAST_PREFILL_MIN_ROWS",
             "TF_HY4_PREFILL_TIMERS", "SERVE_VISION", "SERVE_VISION_TOKENS", "TF_HY4_VISION_DIR",

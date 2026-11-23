@@ -1,67 +1,41 @@
-# Hy4 on Four DGX Sparks
+<p align="center">
+  <img src="assets/hero.jpg" width="100%" alt="Four DGX Sparks carrying a giant penguin in a gold scarf. JJH HY4 1.0 for 4x DGX Sparks. 774B parameters. Four small boxes.">
+</p>
 
-A recipe for quantizing Tencent's Hy4 (774B parameters, checkpoint `c10c0de5`) and serving it on four DGX Sparks cabled in a ring, with TensorFold running four-way tensor parallel over RoCE. The repository holds the quantization recipes, the TensorFold and quantizer patches with their generators, staging and launch scripts, benchmarks, the quality evaluation and a claims ledger (`card/claims.json`) that ties every number to the run that produced it.
+# JJH HY4 1.0 for 4x DGX Sparks
 
-**Version 1.0**, the first published release. The rows marked "Earlier build" are our earlier build (engine `6e0fcf1ec`, kit `b5559f6`), which was not published. Its receipts are in this repository: `receipts/next/prefill/base-2200/` for the rows beside this release's, and `card/claims.json` names the receipt of every number.
+A recipe for running Tencent's Hy4 (774B parameters, checkpoint `c10c0de5`) on four DGX Sparks cabled in a ring: quantized to 3.12 bits per weight, served by TensorFold four-way tensor parallel over RoCE.
 
-## What is new against the earlier build
+The claims ledger, `card/claims.json`, ties each measured value to the run that produced it.
 
-This release adds two things to the full quant: faster prefill and the model's own vision tower, served on the same four Sparks. It does not change the decode path.
+[Weights](https://huggingface.co/jakejharris/jjh-hy4-exl3) · [What you need](#what-you-need) · [Steps](#steps) · [Limits](#limits) · [Findings](FINDINGS.md) · [Claims ledger](card/claims.json)
 
-Every number in this section comes from runs with each Spark's graphics clock capped at 2,200 MHz, not stock clocks. One Spark lost power three times under four-Spark load at stock clocks; what ran at the cap is in [open items](FINDINGS.md#open-items). The rest of this page is the earlier build's engine at stock clocks unless it says otherwise.
+## Speed
 
-**Faster prefill.** The prompt's attention and token index now run on tensor cores, and the four Sparks add their partial results in one ring all-reduce. The kit's launch turns this on (`TF_HY4_FAST_PREFILL=1`) and adds in FP32 (`TF_HY4_PREFILL_AR=fp32`). `TF_HY4_FAST_PREFILL=0` gives the earlier build's path ([settings](launch/SETTINGS.md#tf_hy4_fast_prefill)).
+This release, one stream, the full quant:
 
-This release's rows come from the release build's own bench, booted through `launch/launch.sh`.
+- **37.69 tok/s** decode on code, **19.07** on prose and **54.58** on RigMark's structured task, greedy.
+- **467.72 / 444.41 / 420.89 tok/s** cold prefill at 8K / 32K / 64K.
+- **0.83 s** to the first token at about 128 prompt tokens, **2.14 s** at 1K and **8.87 s** at 4K.
+- **35.82 tok/s** on code and **21.04** on prose, sampled at temperature 0.7 with thinking off.
+- **131,072-token** context. At 128K the needle test found its code, with thinking on and off.
 
-| Cold prefill, tok/s, one request each | 8K | 32K | 64K |
-| --- | --- | --- | --- |
-| Earlier build | 155.02 | 137.19 | 124.84 |
-| This release, FP32 sums (default) | 467.72 | 444.41 | 420.89 |
-| This release, BF16 sums (opt-in) | 519.30 | 491.15 | 462.41 |
+Drafts on, thinking off unless marked, each Spark's graphics clock capped at 2,200 MHz. Decode and first-token times are medians of 3 runs; prefill is one cold request per depth.
 
-Prefill is still the slow side of this build. A cold 64K prompt waits 155.71 s for its first token, and the 128K needle prompt 343.59 s. Later releases work on it.
+Prefill is the slow side: a cold 64K prompt waits **155.71 s** for its first token, and the 128K needle prompt **343.59 s**. Later releases work on it.
 
-| One-stream decode, tok/s, median of 3 runs | Code | Prose | Structured |
-| --- | --- | --- | --- |
-| Earlier build | 38.37 | 19.50 | 55.48 |
-| This release (default) | 37.69 | 19.07 | 54.58 |
+### Reading the numbers
 
-Both tables: RigMark 1.3.0 with custom settings, drafts on, thinking off. Prefill is prompt tokens over the client's time to first output, for a cold prompt on an already running serve: one cold request and one immediate replay per depth, 8 output tokens. The BF16 row is a prefill-only run. Decode is the median of three runs per workload, this release's from a decode-only run. Setups: `card/claims.json` (`next.prefill.*`, `next.decode.*`).
+<details>
+<summary>How each number was measured, and on which build</summary>
 
-Both decode rows ran RigMark under one `--comparison-id`, `2026-11-22-hy4-speed-team-2200mhz`, so on the same prompts. Outputs against the earlier build's row: all 9 the same text, token for token, so the rates are like for like.
+This release ships our merged engine (`ef8ebb7c`, the release build) with one fix that makes sampled decode faster: 0c2ef40993b4d76b4b10f0bc79a84b77588e4874. On the fixed build, greedy and same-seed sampled requests gave the release build's tokens exactly: greedy 2 of 2, same seed 8 of 8 (`receipts/next/release/fix-parity/`). So the release build's values stand for 1.0, except the speed of sampled decode.
 
-This release does not change the decode path, so this page makes no faster or slower claim on decode. The binary's path alone moves decode by about 2%: the earlier build's own bytes, run from another folder, read 37.63 / 19.05 / 54.46 tok/s against the row above ([serve/BUILD.md](serve/BUILD.md#pin-the-build-container-cores-and-a-clean-cache)). A control run at the release binary's path length was dropped for time.
+**Decode and prefill.** [RigMark](#rigmark) 1.3.0 with custom settings, on the release build booted through `launch/launch.sh`. Prefill is prompt tokens over the client's time to first output, for a cold prompt on an already running serve: one cold request and one immediate replay per depth, 8 output tokens. Decode is the median of three runs per workload, from a decode-only run. Setups: `card/claims.json` (`next.prefill.*`, `next.decode.*`).
 
-An earlier decode run of the release build used the kit's own id, so other prompts and other text. Its rates are in `card/claims.json` (`next.decode.*.fp32`), not in this table. Decode does not depend on how prefill sums, so BF16 sums have no decode row.
+**BF16 sums.** Prefill adds the four Sparks' partial results in FP32 by default (`TF_HY4_PREFILL_AR=fp32`). BF16 sums are faster, 519.30 / 491.15 / 462.41 tok/s at 8K / 32K / 64K in a prefill-only run, with lower agreement ([Accuracy](#accuracy)). Decode does not depend on how prefill sums.
 
-Clocks: each run holds one graphics-clock snapshot per Spark, taken once early in the run (2,184 MHz in the four bench runs here, 2,171 to 2,190 MHz across the round's runs), not a memory clock and not a trace over the whole run. RigMark's own card in those receipts says stock clocks; for these runs that line is wrong.
-
-**Why FP32 sums are the default.** On the speed build, switching the sums from FP32 to BF16 lost four fresh positions of agreement with Tencent's BF16 reference. With FP32 sums: 97.92% on the familiar set, 91.41% on the fresh set. With BF16 sums: 97.32% and 90.36%. The earlier build, same positions: 96.73% and 91.41%. BF16 sums prefill faster; the table gives how much.
-
-**KL divergence against Tencent's BF16.** A second panel scores the whole next-token distribution, not only the top pick: `KL(BF16 || row)` in nats over the full 120,832-token vocabulary, and top-1 agreement, against reference logits from Tencent's BF16 checkpoint. Every row is scored on the same positions.
-
-| Row | Text model | Bits per weight | Up to 2,048 tokens: 512 positions, 8 prompts | Past 2,048 tokens: 768 positions, 4 prompts |
-| --- | --- | --- | --- | --- |
-| Tencent's BF16, run again at another batch width | 1,539.81 GB | 16.00 | 478 of 512 (93.36%); median 0.00007, mean 0.308 | 626 of 768 (81.51%); median 0.00006, mean 1.585 |
-| Lossless trunk (option) | 331.69 GB | 3.45 | 465 of 512 (90.82%); median 0.00014, mean 0.461 | 581 of 768 (75.65%); median 0.00015, mean 2.028 |
-| Full quant (default) | 300.07 GB | 3.12 | 465 of 512 (90.82%); median 0.00013, mean 0.556 | 602 of 768 (78.39%); median 0.00010, mean 1.761 |
-
-Each cell gives top-1 agreement, then the median and mean KL. The first row is BF16 against itself at another batch width. It is the floor for this panel: a build cannot be expected to agree with BF16 more than BF16 agrees with itself. What causes the floor was not measured.
-
-The full quant is under the floor: by 13 of the 512 positions up to 2,048 tokens (2.54 points) and by 24 of the 768 past them (3.13 points). A few positions with large KL pull the mean up, so the median and the top-1 counts sit beside it.
-
-How it was scored: a panel tool on our engine branch `hy4-kl-panel` (`b51568b41`, one commit off the release commit), which is not in this kit yet ([open items](FINDINGS.md#open-items)). Its picks were not cross-checked against the served build's picks (`served_pick_checks` is empty in the receipts). The logit files, about 990 MB each, are not in the kit either. Receipts: `receipts/quant/kl-panel/`.
-
-This panel's prompts are not those of the 720 public positions above (680 agree, 94.44%), so 90.82% here and 94.44% there do not contradict each other.
-
-**Not the same output as before.** The new prefill rounds and sums differently, so its output is not bit-identical to the earlier build's. It rounds to BF16 in places the earlier build's path does not ([which](launch/SETTINGS.md#tf_hy4_fast_prefill)). The same prompt and seed, greedy included, can give a different answer than the earlier build gave. `TF_HY4_FAST_PREFILL=0` gives the earlier build's prefill path.
-
-**Fast path on against off.** On the release build (greedy, drafts and thinking off), 13 long prompts were sent both ways. Ten of 8,185 to 32,779 tokens: 9 gave the same tokens, one differed from its first token. Three that check facts in the prompt (2,120 to 20,000 tokens): two parted after 23 and 21 equal tokens, and all three kept every fact (`receipts/next/release/longcheck/`).
-
-**128K needle.** The earlier build found the code at 128K, its first token after 1114.91 s at stock clocks. With the fast path and FP32 sums, the default: 343.59 s.
-
-**Time to first token on short prompts.** Cold prompts on the release build, kit defaults, vision on. The time is the client's, from sending the request to the first streamed piece of output. Each prompt starts with a fresh random line, so no prefix is cached, and the server reported 0 cached tokens on all 21 requests. Thinking off, greedy, 8 output tokens, one request at a time.
+**First token on short prompts.** Cold prompts on the release build, kit defaults, vision on, thinking off, greedy, 8 output tokens, one request at a time. The time is the client's, from sending the request to the first streamed piece of output. Each prompt starts with a fresh random line, so no prefix is cached, and the server reported 0 cached tokens on all 21 requests.
 
 | Prompt tokens (the three requests) | Time to first token, median of 3 (min to max) |
 | --- | --- |
@@ -73,31 +47,56 @@ This panel's prompts are not those of the 720 public positions above (680 agree,
 | 2,043, 2,043, 2,047 | 4.21 s (4.21 to 4.21) |
 | 4,090, 4,101, 4,109 | 8.87 s (8.83 to 8.99) |
 
-The row near 250 tokens is slower than the row near 300. The fast prefill path starts at 256 prompt rows (`TF_HY4_FAST_PREFILL_MIN_ROWS`); that is the likely reason, and it was not isolated by a run. The script is the kit's own `bench/ttft_sweep.py`, not RigMark, and there is no earlier-build row (`receipts/next/release/ttft/`).
+The row near 250 tokens is slower than the row near 300. The fast prefill path starts at 256 prompt rows (`TF_HY4_FAST_PREFILL_MIN_ROWS`); that is the likely reason, and it was not isolated by a run. The script is the kit's own `bench/ttft_sweep.py`, not RigMark (`receipts/next/release/ttft/`).
 
-**No prefix reuse between requests.** Every request is read from its first token. Nothing is kept from an earlier request, so each turn of a conversation waits for its whole prompt ([open items](FINDINGS.md#open-items)).
+**Faster sampling.** On the release build, a sampled request (any `temperature` above 0) moved every sampled row's full logits between the four Sparks over TCP, in 16 KiB pieces: about 90 four-rank exchanges in a round of five drafts, read from the code. Greedy moves 8 bytes. With thinking on at 0.7, that build decoded 16.20 tok/s on the code prompt, against 25.98 tok/s greedy on the same boot.
 
-Two turns of one conversation from the agent runs below, on the release build with thinking off: 20,414 prompt tokens waited 46.28 s for the first streamed piece, and the next turn, 20,455 tokens, 46.35 s. The server reported 0 cached tokens on both, and on all 66 requests of those runs.
+The fixed build sends the same bytes over the RoCE link in one or two calls a round and leaves greedy alone, and the same seed gives the same tokens. With the same settings it decoded 22.21 tok/s, against 25.94 tok/s greedy. With thinking off, code written at 0.7 came at 35.82 tok/s.
 
-**Vision.** Rank 0 now runs the model's own vision tower on still images, sent as OpenAI `image_url` parts with a data URL. A 1440x900 screenshot is 1,288 tokens. Vision is off unless `SERVE_VISION=1` ([settings](launch/SETTINGS.md#serve_vision)). On the vision build, 2 of 2 text requests gave the same tokens with vision on and off.
+- **Default temperature.** A request that sends no `temperature` gets 0.7 from the launcher, not Tencent's 0.9 ([`SERVE_TEMPERATURE`](launch/SETTINGS.md#serve_temperature)). Defaults in the serving line: temperature 0.70, top_k -1, top_p 1.
+- **Decode at 0.7.** On the fixed build, thinking off, a 2,048-token cap, median of three: 21.04 tok/s and 35.82 tok/s on the prose and code prompts, against 21.91 tok/s and 35.65 tok/s greedy on the same boot. The reply is the essay or the code itself. Running alongside: the weights upload on node1 (one Python process, no GPU use, over Wi-Fi).
+- **Reasoning at 0.7.** The same boot and prompts, thinking on: 20.89 tok/s and 22.21 tok/s, against 23.91 tok/s and 25.94 tok/s greedy. Every reply was still reasoning at the cap, so these are reasoning speeds.
 
-The tower is not in the pack. It is a separate folder, `vit-bf16/`: `vit.safetensors` (2,470,326,144 bytes, the 649 `vit.*` tensors copied unchanged in BF16 from `tencent/Hy4` `c10c0de5`) with the source's `config.json` and `processor_config.json`. `python3 tools/vit_folder.py SOURCE_DIR OUT_DIR` builds it and `launch/vision.sha256` holds its hashes. Only rank 0 needs it.
+**Drafts.** With drafts on, Hy4's small drafting model (DFly2) proposes up to six tokens a pass and the full model keeps the ones it would pick itself, which is faster. The repeat option (`TF_HY4_REPEAT_STABLE=1`, on by default) makes the same prompt give the same tokens with drafts on ([measured](card/QUALITY_CARD.md#repeat-option)). `"draft": false` on a request gives plain output.
 
-Point `TF_HY4_VISION_DIR` at that folder on rank 0. `launch/preflight.sh` refuses the launch if a file is missing or a hash differs. Rank 0 holds 2.69 GiB more, and its lowest free memory at 128K was 23.17 GiB.
+**Clocks.** Each run holds one graphics-clock snapshot per Spark, taken once early in the run (2,184 MHz in the four bench runs here, 2,171 to 2,190 MHz across the round's runs), not a memory clock and not a trace over the whole run. RigMark's own card in those receipts says stock clocks; for these runs that line is wrong.
+
+**Engine.** Agreement was measured on speed step 2 and the vision tower's closeness on a vision build, two builds of our engine that the release build merges. This release's prefill, decode, needle and image-request values come from the release build. Its commit is ef8ebb7c87aa81ff4afe4bb43bb38d05f5dd4e4e.
+
+Its gate: 512 of 512 host tests on that commit on the PC (6 optional codec tests skipped there), a clean Cortex-A725 cross-compile, and the release binaries built from this kit's patch on a fresh clone of the kit at d3a9e0a.
+
+1.0 ships the release build with the sampling fix: 0c2ef40993b4d76b4b10f0bc79a84b77588e4874, branch `hy4-sample-fast`.
+
+Its gate: 517 of 517 host tests on that commit on the PC (6 optional codec tests skipped there), a clean Cortex-A725 cross-compile, and the release binaries built from this kit's patch on a fresh clone of the kit at 85a7d0b.
+
+`serve/patches/0001-hy4-port.patch` is cut from the fixed commit (0c2ef40993b4d76b4b10f0bc79a84b77588e4874) by `serve/make_patches.sh --check`, so building from this kit gives the fixed build ([serve/BUILD.md](serve/BUILD.md)).
+
+</details>
+
+### RigMark
+
+[RigMark](THIRD_PARTY.md#rigmark) is a third-party benchmark, credited with its license. It puts a nonce made from `--comparison-id` into every prompt, so decode rates compare only under one id. This release's decode rows ran under `2026-11-22-hy4-speed-team-2200mhz`; an earlier decode run of the release build used the kit's own id, so other prompts (`next.decode.*.fp32` in `card/claims.json`).
+
+Its structured task is a predictable JSON reply, a ceiling. Our one run of its full standard suite was cut short by a power loss ([Development notes](#development-notes)).
+
+## What you get
+
+**Vision.** The model's own vision tower runs on rank 0 for still images, sent as OpenAI `image_url` parts with a data URL. A 1440x900 screenshot is 1,288 tokens. It answered 3 of 3 known-answer images right. That is a spot check on three images, not a benchmark.
+
+Vision is off unless `SERVE_VISION=1` ([settings](launch/SETTINGS.md#serve_vision)). The tower is a separate folder, `vit-bf16/` (2.47 GB), on rank 0 only: in the weights repository, or built from Tencent's checkpoint ([step 6](#steps)).
+
+<details>
+<summary>Vision in detail: the tower, how close it is, speed, formats and request limits</summary>
+
+**The tower.** `vit-bf16/` holds `vit.safetensors` (2,470,326,144 bytes, the 649 `vit.*` tensors copied unchanged in BF16 from `tencent/Hy4` `c10c0de5`) with the source's `config.json` and `processor_config.json`. `python3 tools/vit_folder.py SOURCE_DIR OUT_DIR` builds it and `launch/vision.sha256` holds its hashes.
+
+Point `TF_HY4_VISION_DIR` at that folder on rank 0. `launch/preflight.sh` refuses the launch if a file is missing or a hash differs. Rank 0 holds 2.69 GiB more, and its lowest free memory at 128K was 23.17 GiB. On the vision build, 2 of 2 text requests gave the same tokens with vision on and off.
 
 **How close it is.** Every 4-layer stretch of the tower matches PyTorch BF16 at a cosine of 0.999984 or better. End to end it is as close to a full-precision PyTorch run as PyTorch's own BF16 is (ours 0.9989, 0.9799, 0.9753 on three images; PyTorch BF16 0.9983 to 0.9986, 0.9757 to 0.9798, 0.9760 to 0.9787), because the tower amplifies BF16 rounding.
 
-It answered 3 of 3 known-answer images right. That is a spot check on three images, not a benchmark.
-
-On the vision build, without the fast path, image requests prefilled at 170.10, 172.10 and 172.80 tok/s on one image each, and 132.90 tok/s on three screenshots in one request (3,951 prompt tokens). On the merged build: 205.50 tok/s. Gates and answers: `receipts/next/vision/`.
+**Speed.** On the vision build, without the fast path, image requests prefilled at 170.10, 172.10 and 172.80 tok/s on one image each, and 132.90 tok/s on three screenshots in one request (3,951 prompt tokens). On the release build, the median of the three known-answer images: 205.50 tok/s. Gates and answers: `receipts/next/vision/`.
 
 On the release build, three screenshots in one request (3,951 prompt tokens) took 24.4 s to the first token, and two images filling the 8,192-token cap (8,255 prompt tokens) took 70.5 s, with rank 0's lowest free memory at 21.61 GiB (2026-11-22, `receipts/next/release/engine-checks/gate_b_summary.json`).
-
-**Thinking on images.** With thinking on and no thinking budget, the kit default, two image requests on the release build spent their whole token limit thinking and gave no answer: the text card at 2,048 tokens, though its reasoning read the code, port and status right, and the three screenshots at 8,192. Ask about images with thinking off, as `bench/vision_check.py` does, or set `SERVE_THINKING_BUDGET` ([settings](launch/SETTINGS.md#serve_thinking_budget)).
-
-**Drafts on images.** With drafts on, a blocky two-digit number in a picture was read as 14 instead of 74, on two boots, as a JPEG and as a PNG of the same pixels. With `"draft": false` it was read right each time ([finding 7](FINDINGS.md#7-a-two-digit-number-in-a-picture-read-with-drafts-on-and-off)). For exact reads of small text or digits in a picture, send `"draft": false` with the request.
-
-**A failed image request.** If an image request fails with a memory error, restart the serve: the other three Sparks can keep the earlier image and spoil the next text request ([open items](FINDINGS.md#open-items)).
 
 | Image requests | |
 | --- | --- |
@@ -118,11 +117,16 @@ The Formats row comes from one boot through the kit's launcher with both decoder
 
 Each image is resized by the checkpoint's own rule: at most 2,048x2,048 pixels of area, the long side at most 200 times the short. The image tokens are split equally among a request's images, and an image over its share is shrunk, not refused. Beside a 1x1 image, a 2,048x2,048 one has a 4,096-token share, so it shrinks to 2,016x2,016. `"detail": "low"` caps an image at 256 tokens.
 
-**Tool calls and structured output.** At boot, rank 0's serve log warns that "libtfgrammar.so is required for structured output and required tool calls (HTTP 400 when missing)". The kit's build does not make that library. The warning names the engine's own build of it, `zig build grammar` with xgrammar `v0.2.8`, which the kit has not run.
+</details>
+
+**Tool calls.** `tools` with `tool_choice` `"auto"`, streamed, each result sent back as a `tool` message. Five multi-turn agent tasks on the release build: 66 requests answered, 64 tool calls, 0 malformed; 5 of 5 tasks solved. No real agent client was run.
+
+<details>
+<summary>Tool calls in detail: the five tasks and the requests the server refuses</summary>
 
 On the release build, `bench/agent_loop.py` ran five multi-turn tasks, each a fresh conversation with three or four tools, `tool_choice` `"auto"`, streamed, greedy, one request at a time. Twice it followed a 24-file trail, and twice it fixed two bugs until the unit tests passed. Once, with the kit's README and FINDINGS in the system prompt, it wrote six values from the README to a JSON file.
 
-The trail and the fix ran once with thinking off and once with no `reasoning_effort`, the server's default; whether those two runs reasoned was not recorded. The README task ran with thinking off. Each tool call got its result back as a `tool` message. No real agent client was run.
+The trail and the fix ran once with thinking off and once with no `reasoning_effort`, the server's default; whether those two runs reasoned was not recorded. The README task ran with thinking off.
 
 | Request | What the server did |
 | --- | --- |
@@ -133,79 +137,34 @@ The trail and the fix ran once with thinking off and once with no `reasoning_eff
 
 In that row, malformed means an unknown tool, arguments that are not a JSON object, or wrong argument names. In 3 turns the model made two calls at once, and the server took both results back. Solved is the script's own check of each task's result (`receipts/next/release/agent-loop/`).
 
-The other three rows are one request each, with the server's defaults (sampled, thinking on) and a 1,024-token limit (`receipts/next/release/tool-probes/`). Whether the library would change them is not tested: the structured-output refusal says the engine does not support it yet.
+The other three rows are one request each, with the server's defaults then (sampled at Tencent's own 0.9, thinking on) and a 1,024-token limit (`receipts/next/release/tool-probes/`). Whether the library below would change them is not tested: the structured-output refusal says the engine does not support it yet.
 
-**Engine.** Apart from the earlier build's rows, the measured values above come from two builds of our engine: speed step 2 (agreement) and a vision build (vision). The release build merges the two, and this release's prefill, decode, needle and image-request values come from it. Its commit is ef8ebb7c87aa81ff4afe4bb43bb38d05f5dd4e4e.
+At boot, rank 0's serve log warns that "libtfgrammar.so is required for structured output and required tool calls (HTTP 400 when missing)". The kit's build does not make that library. The warning names the engine's own build of it, `zig build grammar` with xgrammar `v0.2.8`, which the kit has not run.
 
-Its gate: 512 of 512 host tests on that commit on the PC (6 optional codec tests skipped there), a clean Cortex-A725 cross-compile, and the release binaries built from this kit's patch on a fresh clone of the kit at d3a9e0a.
+</details>
 
-`serve/patches/0001-hy4-port.patch` is cut from that commit (`ef8ebb7c87aa81ff4afe4bb43bb38d05f5dd4e4e`, branch `hy4-next`) by `serve/make_patches.sh --check`, so building from this kit gives the release build ([serve/BUILD.md](serve/BUILD.md)).
+### Two builds
 
-## Two builds
-
-The table below is the earlier build's engine at stock clocks. This release changes its prefill and agreement rows ([What is new](#what-is-new-against-the-earlier-build)).
-
-Both builds share the same routed experts. They differ only in the attention and shared-expert weights (the trunk), which is one setting at launch. `4b6b` packs the trunk at 4 bits with `o_proj` and `kv_a` at 6 bits; the [quality card](card/QUALITY_CARD.md#why-4b6b-the-four-build-table) says why.
+Both builds share the same routed experts. They differ only in the attention and shared-expert weights (the trunk), which is one setting at launch. Every speed number above is the full quant's.
 
 | | **Full quant** (default) | **Lossless trunk** (option) |
 | --- | --- | --- |
 | Routed experts | EXL3, 3.00 bits per weight | EXL3, 3.00 bits per weight |
 | Attention and shared experts | EXL3, `4b6b` | BF16, as Tencent ships them |
-| KV cache and token index | BF16 | BF16 |
-| Weights per Spark (largest rank) | 75.22 GiB | 83.72 GiB |
-| Free memory at 128K (lowest Spark) | 24.52 GiB | Not measured: the lossless trunk is not booted at 128K |
-| Decode at 4K, prose: plain / drafts | 17.64 / 34.58 tok/s | 9.32 / 21.85 tok/s |
-| Decode at 4K, code: plain / drafts | 17.50 / 37.95 tok/s | 9.33 / 25.06 tok/s |
-| Prefill, 32K prompt (earlier build's path) | 144.98 tok/s | 155.73 tok/s |
-| 128K needle, thinking on / off | pass / pass | Not measured (no 128K boot) |
-| Top-1 agreement with Tencent's BF16 reference, familiar set | 96.73% | 97.02% |
-| Top-1 agreement with Tencent's BF16 reference, fresh set | 91.41% | 90.10% |
-| Top-1 change against the lossless trunk, familiar set | -0.30 points; paired counts: 1 position only the lossless build gets right, 0 only the full quant | Not applicable |
-| Top-1 change against the lossless trunk, fresh set | +1.30 points; paired counts: 3 positions only the lossless build gets right, 8 only the full quant | Not applicable |
+| Text model | 300.07 GB, 3.12 bits per weight | 331.69 GB, 3.45 bits per weight |
 
-Spreads, setups and every run are on the [quality card](card/QUALITY_CARD.md) and in `card/claims.json`.
+`4b6b` packs the trunk at 4 bits with `o_proj` and `kv_a` at 6 bits; the [quality card](card/QUALITY_CARD.md#why-4b6b-the-four-build-table) says why and compares the two builds. The lossless trunk is not booted at 128K, where the memory gate does not let it run.
 
-### Size
+<details>
+<summary>How the sizes were read, and what the download holds</summary>
 
-Read from the weight files' headers on a Spark that holds the full pack.
+Read from the weight files' headers on a Spark that holds the full pack. Every weight in BF16 would be 1,539.81 GB (16.00 bits per weight).
 
-| Build | Text model | Bits per weight |
-| --- | --- | --- |
-| Full quant (`4b6b`, default) | 300.07 GB | 3.12 |
-| Lossless trunk | 331.69 GB | 3.45 |
-| Every weight in BF16 | 1,539.81 GB | 16.00 |
-
-The text model is every tensor in the weight index except the DFly2 drafter's. Its size counts tensor data, not file headers, and bits per weight is that size in bits over its weights, each packed matrix counted at its full shape. The BF16 row is 2 bytes a weight, not the size of Tencent's files. GB is 10^9 bytes. Script and output: [`tools/text_size.py`](tools/text_size.py) and `receipts/quant/text_size.json`.
+The text model is every tensor in the weight index except the DFly2 drafter's. Its size counts tensor data, not file headers, and bits per weight is that size in bits over its weights, each packed matrix counted at its full shape. The BF16 figure is 2 bytes a weight, not the size of Tencent's files. GB is 10^9 bytes. Script and output: [`tools/text_size.py`](tools/text_size.py) and `receipts/quant/text_size.json`.
 
 Served, the full quant reads 300.07 GB of text weights, plus its drafter and, with vision on, `vit-bf16/` (2.47 GB) on rank 0. The download is 371.84 GB because one folder holds both builds: the source trunk and both packed trunks ([Get the weights](#get-the-weights)). Cut into parts, each Spark holds 79.74 GB: its own 75.69 GB and 4.05 GB that all four keep ([Per-Spark weight files](#per-spark-weight-files)).
 
-## Reading the numbers
-
-- **Decode.** One stream, greedy, thinking on, 128 tokens generated from `bench/prompts/short-prose.txt` or `short-code.txt` in a 4,096-token context, median of three runs, over the direct RoCE relay. Rate is tokens after the first, divided by the time from first to last token. Drafted runs use the row-cost table measured on the same ring and the repeat option on.
-- **Drafts.** With drafts on, Hy4's small drafting model (DFly2) proposes up to six tokens a pass and the full model keeps the ones it would pick itself, which is faster. Each token is checked in a wider batch, where BF16 rounds differently, so at a close call drafted text can differ from plain text; the [quality card](card/QUALITY_CARD.md#drafted-against-plain) gives the counts. `"draft": false` on a request gives plain output.
-- **Repeat option.** On by default (`TF_HY4_REPEAT_STABLE=1`): with drafts on, the same prompt gives the same tokens. Turned off on the full quant, median drafted decode was 31.37 tok/s on prose against 34.58 with it on, and within 0.82 tok/s on the other three bench prompts; a repeat can then differ.
-- **Sampling and thinking.** The decode rows are greedy (`temperature` 0). Tencent's sampling (`temperature` 0.9, used when a request sends none) decoded one long coding request at about 13 tok/s against 32.7 greedy. With thinking on, it ran out of tokens before its answer. Greedy, it finished with `"thinking_budget"` or `reasoning_effort` `no_think`; at 0.9 with the budget it did not. Other temperatures and tasks are not measured yet ([finding 6](FINDINGS.md#6-with-thinking-on-a-long-coding-reply-can-end-before-the-answer-starts)).
-- **Agreement.** The served build's greedy next token against that of Tencent's BF16 checkpoint, at the same positions for both builds, on the public sets in `eval/prefixes/`. The familiar set is widely copied, so builds look alike there; the fresh set was first published in November 2026. There the reference predicts 65.44% of next tokens (91.04% familiar), with 2.7 times the close calls, so read the fresh rows.
-
-### RigMark
-
-[RigMark](THIRD_PARTY.md#rigmark) is a third-party benchmark, credited with its license in `THIRD_PARTY.md`. Setup: protocol 1.3.0 at revision `68800bf`, its full standard suite, four DGX Sparks, full quant `4b6b`, drafts on, stock GPU clocks, thinking off (`reasoning_effort` `no_think`; with thinking on, a code reply ran out of tokens, [finding 6](FINDINGS.md#6-with-thinking-on-a-long-coding-reply-can-end-before-the-answer-starts)). The server takes one request at a time, so concurrent streams queue. Structured output is a predictable JSON task, a ceiling.
-
-RigMark puts a nonce made from `--comparison-id` into every prompt. A different id gives different prompts and different text, so token counts and decode rates are only comparable under one id.
-
-**A run cut short, not a RigMark result.** The full suite ran on 2026-11-21 from 20:57 UTC, with the settings above and the kit's launcher. At 22:25 UTC one Spark lost power ([open items](FINDINGS.md#open-items)), during the last 64K replay. RigMark wrote no receipt and no card, and the concurrency part never ran. So there is no RigMark result; the lines below are from the logs.
-
-These lines come from the benchmark client's own log and the server's log. RigMark's completion gates were not recorded for this run, and neither was its revision. The 5 structured replies are the same 422 tokens as those of the earlier quick run, which passed its gates.
-
-| Cut-short run, one stream, decode | Code | Prose | Structured |
-| --- | --- | --- | --- |
-| tok/s, median of 5 runs | 38.4 | 19.1 | 55.3 |
-
-| Cut-short run, cold prefill | 8K | 32K | 64K |
-| --- | --- | --- | --- |
-| tok/s, median of 3 requests | 165.0 | 146.4 | 133.8 |
-
-All 15 decode replies ended by themselves. The 8 replays that finished gave the same output as their cold requests, within 0.2 tok/s. The client prints a 64K pair only after its replay, so the third 64K cold rate is from the server's log: 65,536 tokens in 489.745 s. Logs: `receipts/rigmark-cut-short/`.
+</details>
 
 ## What you need
 
@@ -259,7 +218,7 @@ Run these in order. Each step's guide has the details and the expected output.
    bash tools/row_cost_table.sh --env-file launch/ring.env --env-file launch/ring.relay.env.example --oracle "$ORACLE_BIN"
    bash launch/launch.sh --env-file launch/ring.env --env-file launch/ring.relay.env.example
    ```
-   Put the printed `TF_HY4_ROW_COST_TABLE` line in `launch/ring.env` ([launch/SETTINGS.md](launch/SETTINGS.md#tf_hy4_row_cost_table)). The earlier build's run measured this table with `tools/row_cost_table.sh` from the kit (2026-11-21, four Sparks, relay, `4b6b` trunk). Its full quant rows at 4K, 32K and 128K use it, and every boot of this release ran with it (`launch_settings` in the `summary.json` files under `receipts/next/release/`):
+   Put the printed `TF_HY4_ROW_COST_TABLE` line in `launch/ring.env` ([launch/SETTINGS.md](launch/SETTINGS.md#tf_hy4_row_cost_table)). We measured ours with `tools/row_cost_table.sh` on 2026-11-21 (four Sparks, relay, `4b6b` trunk), and every boot of this release ran with it (`launch_settings` in the `summary.json` files under `receipts/next/release/`):
    ```bash
    TF_HY4_ROW_COST_TABLE="v1:56.74,v2:68.72,v3:78.15,v4:86.81,v5:95.48,v6:104.15,v7:112.81,d:6.44,e:0.41"
    ```
@@ -281,9 +240,9 @@ Run these in order. Each step's guide has the details and the expected output.
 
    **Stopping it.** Press Ctrl-C in the launcher's terminal, or from a script send `kill -TERM` to the launcher's process. A background job in a script ignores SIGINT, so `kill -INT` does nothing there. Either way the launcher writes `launch_meta.json` and removes the four rank containers.
 
-   Load to ready on this release: 81 s cold, full quant, 131,072-token window, vision on (`receipts/next/release/window1/systems.load.cold.exl3.json`). On the earlier build: 79 s (full quant, 131,072-token window), 84 s (lossless trunk, 32,768-token window).
+   If the launcher does not exit, a rank container outlived the stop (while rank 0's is up, `/health` still answers): find it with `docker ps --filter name=hy4-tp4-r` on each Spark, rank 0 being the first in `RING_HOSTS`, and remove it there with `docker rm -f` and its name.
 
-   The two-build table's speed and quality numbers were measured on the earlier build, on all four Sparks; the [quality card](card/QUALITY_CARD.md#engine) lists each binary's SHA-256. Each `next.*` claim names the build it was measured on.
+   Load to ready on this release: 81 s cold, full quant, 131,072-token window, vision on (`receipts/next/release/window1/systems.load.cold.exl3.json`). Each `next.*` claim names the build it was measured on.
 7. **Benchmark** ([bench/README.md](bench/README.md)). Decode at 4K and the 128K needle on the running build:
    ```bash
    python3 bench/bench.py --url http://127.0.0.1:8080 --prompt bench/prompts/short-prose.txt --label prose --runs 3 --max-tokens 128 --out results/prose.json
@@ -296,27 +255,75 @@ Run these in order. Each step's guide has the details and the expected output.
    python3 bench/vision_check.py --url http://127.0.0.1:8080 --out "$LOGDIR/vision_check.json"
    python3 launch/collect_receipts.py --logdir "$LOGDIR" --out-dir receipts/run --label run
    ```
-   The needle is one code at half depth, run with thinking on and again with thinking off (`--reasoning-effort no_think --max-tokens 256`). Time to first token on the 128,000-token prompt, full quant: 343.59 s on this release, and 1114.91 s on the earlier build at stock clocks. The lossless trunk is not booted at 128K. The 32K rows use `bench/prompts/pp-32k.txt` with `--runs 3 --max-tokens 64` on a 32,768-token boot.
+   The needle is one code at half depth, run with thinking on and again with thinking off (`--reasoning-effort no_think --max-tokens 256`). Time to first token on the 128,000-token prompt, full quant: 343.59 s. The lossless trunk is not booted at 128K. For prefill at 32K, use `bench/prompts/pp-32k.txt` with `--runs 3 --max-tokens 64` on a 32,768-token boot.
 8. **Evaluate quality** ([eval/README.md](eval/README.md)). Top-1 agreement with the BF16 reference on the familiar public prefix set (the fresh set runs the same way from `eval/prefixes/fresh/`, with its own output names). Run it on the lossless trunk first, which sets the positions, then on the full quant at the same positions:
    ```bash
    python3 eval/agreement.py collect --url http://127.0.0.1:8080 --model hy4-exl3 --prefixes eval/prefixes/familiar/prefixes.safetensors --cuts 384,192,288,96 --max-seconds 1800 --label lossless --out results/lossless_picks.json
    python3 eval/agreement.py collect --url http://127.0.0.1:8080 --model hy4-exl3 --prefixes eval/prefixes/familiar/prefixes.safetensors --match-grid results/lossless_picks.json --max-seconds 1800 --label 4b6b --out results/4b6b_picks.json
    python3 eval/agreement.py score --teacher eval/prefixes/familiar/reference_picks.safetensors --cand results/4b6b_picks.json --lossless results/lossless_picks.json --json-out results/4b6b_score.json
    ```
-   The scores fill the agreement rows of the table above; the paired counts behind the change are on the [quality card](card/QUALITY_CARD.md#agreement-with-the-bf16-reference).
+   The paired counts behind the change against the lossless trunk are on the [quality card](card/QUALITY_CARD.md#agreement-with-the-bf16-reference).
 
    `collect` stops on a whole cut after `--max-seconds` (270 by default), so pass a cap that lets every cut finish: four cuts of the 84 prefixes give 336 positions, and the ledger fills an agreement cell only from 256 positions or more.
 
 To fill the ledger from one boot's outputs, lay them out as `card/fill-map.json` describes and run `python3 tools/fill_claims.py --outputs DIR --dry-run`, then again without `--dry-run`. It checks each file's build, trunk width, context, transport and draft labels before writing a value, copies the receipt into `receipts/`, and refuses anything that does not match.
 
+## Accuracy
+
+Scored against Tencent's BF16 checkpoint. A KL panel compares the whole next-token distribution, not only the top pick: `KL(BF16 || row)` in nats over the full 120,832-token vocabulary, and top-1 agreement. Every row is scored on the same positions.
+
+| Row | Text model | Bits per weight | Up to 2,048 tokens: 512 positions, 8 prompts | Past 2,048 tokens: 768 positions, 4 prompts |
+| --- | --- | --- | --- | --- |
+| Tencent's BF16, run again at another batch width | 1,539.81 GB | 16.00 | 478 of 512 (93.36%); median 0.00007, mean 0.308 | 626 of 768 (81.51%); median 0.00006, mean 1.585 |
+| Lossless trunk (option) | 331.69 GB | 3.45 | 465 of 512 (90.82%); median 0.00014, mean 0.461 | 581 of 768 (75.65%); median 0.00015, mean 2.028 |
+| Full quant (default) | 300.07 GB | 3.12 | 465 of 512 (90.82%); median 0.00013, mean 0.556 | 602 of 768 (78.39%); median 0.00010, mean 1.761 |
+
+Each cell gives top-1 agreement, then the median and mean KL. The first row is BF16 against itself at another batch width. It is the floor for this panel: a build cannot be expected to agree with BF16 more than BF16 agrees with itself.
+
+The full quant is under the floor: by 13 of the 512 positions up to 2,048 tokens (2.54 points) and by 24 of the 768 past them (3.13 points).
+
+Top-1 agreement on the public prefix sets, FP32 sums (the default): **97.92%** on the familiar set and **91.41%** on the fresh set, measured on speed step 2, one of the two builds the release build merges. Read the fresh set: it was first published in November 2026.
+
+<details>
+<summary>How accuracy was scored</summary>
+
+**The KL panel.** A panel tool on our engine branch `hy4-kl-panel` (`b51568b41`, one commit off the release commit), which is not in this kit yet ([open items](FINDINGS.md#open-items)). Its picks were not cross-checked against the served build's picks (`served_pick_checks` is empty in the receipts). The logit files, about 990 MB each, are not in the kit either. Receipts: `receipts/quant/kl-panel/`.
+
+What causes the floor was not measured. A few positions with large KL pull the mean up, so the median and the top-1 counts sit beside it. This panel's prompts are not those of the 720 public positions (680 agree, 94.44%), so 90.82% on this panel and 94.44% on those positions do not contradict each other.
+
+**Agreement.** The served build's greedy next token against that of Tencent's BF16 checkpoint, on the public sets in `eval/prefixes/`. The familiar set is widely copied, so builds look alike there; the fresh set was first published in November 2026. There the reference predicts 65.44% of next tokens (91.04% familiar), with 2.7 times the close calls, so read the fresh rows.
+
+**Why FP32 sums are the default.** On speed step 2, switching the sums from FP32 to BF16 lost four fresh positions of agreement with Tencent's BF16 reference. With FP32 sums: 97.92% on the familiar set, 91.41% on the fresh set. With BF16 sums: 97.32% and 90.36%. BF16 sums prefill faster ([Reading the numbers](#reading-the-numbers)).
+
+**Fast path on against off.** On the release build (greedy, drafts and thinking off), 13 long prompts were sent both ways. Ten of 8,185 to 32,779 tokens: 9 gave the same tokens, one differed from its first token. Three that check facts in the prompt (2,120 to 20,000 tokens): two parted after 23 and 21 equal tokens, and all three kept every fact (`receipts/next/release/longcheck/`).
+
+</details>
+
+## Limits
+
+Know these before you start:
+
+- **One request at a time.** Concurrent streams queue.
+- **No prefix reuse.** Every request is read from its first token, so each turn of a conversation waits for its whole prompt: 20,414 prompt tokens waited 46.28 s for the first streamed piece, and the next turn, 20,455 tokens, 46.35 s, with 0 cached tokens on both ([open items](FINDINGS.md#open-items)).
+- **Tool calls: `tool_choice` `"auto"` only.** `"required"` and a named function get HTTP 400.
+- **No structured output.** `response_format`, `json_schema` and `json_object` alike, gets HTTP 400: the engine does not support it yet.
+- **Drafts can flip a close call.** Each drafted token is checked in a wider batch, where BF16 rounds differently, so drafted text can differ from plain text ([counts](card/QUALITY_CARD.md#drafted-against-plain)). A two-digit number in a picture was read as 14 instead of 74 with drafts on ([finding 7](FINDINGS.md#7-a-two-digit-number-in-a-picture-read-with-drafts-on-and-off)). For exact reads, send `"draft": false`.
+- **Thinking on images.** With thinking on and no thinking budget, the kit default, two image requests spent their whole token limit thinking and gave no answer. Ask about images with thinking off, as `bench/vision_check.py` does, or set `SERVE_THINKING_BUDGET` ([settings](launch/SETTINGS.md#serve_thinking_budget)). A long coding reply can do the same ([finding 6](FINDINGS.md#6-with-thinking-on-a-long-coding-reply-can-end-before-the-answer-starts)).
+- **A failed image request.** If an image request fails with a memory error, restart the serve: the other three Sparks can keep the earlier image and spoil the next text request ([open items](FINDINGS.md#open-items)).
+- **Clocks.** Every speed number ran with each Spark's graphics clock capped at 2,200 MHz. At stock clocks, one of our Sparks lost power three times under four-Spark load ([open items](FINDINGS.md#open-items)).
+
 ## Launch settings
 
-`launch/ring.env.example` carries the defaults. These are the settings that change what runs; [launch/SETTINGS.md](launch/SETTINGS.md) has the detail and the measurements for each.
+`launch/ring.env.example` carries the defaults. [launch/SETTINGS.md](launch/SETTINGS.md) has the detail and the measurements for each setting.
+
+<details>
+<summary>The settings that change what runs</summary>
 
 | Setting | Default | What it does |
 | --- | --- | --- |
 | `TF_HY4_TRUNK` | `4b6b` | Packed trunk width (`4b`, `4b6b`, `6b`); empty serves the trunk lossless. Set by `ring.lossless.env.example`. |
 | `SERVE_DRAFTS` | `1` | DFly2 drafts on: faster decode, but drafted text can differ from plain text. Empty or missing also means on; `0` turns them off ([more](launch/SETTINGS.md#serve_drafts)). |
+| `SERVE_TEMPERATURE` | `0.7` | The temperature a request gets when it sends none. Empty passes no flag (Tencent's 0.9); `0` makes greedy the default ([more](launch/SETTINGS.md#serve_temperature)). |
 | `SERVE_THINKING_BUDGET` | empty (no budget) | A default thinking budget, in tokens, for every request that reasons. Run once: greedy finished, sampled at 0.9 did not ([more](launch/SETTINGS.md#serve_thinking_budget)). |
 | `SERVE_MODEL_NAME` | empty (the model folder's name) | The name `/v1/models` lists; run once on the Sparks ([more](launch/SETTINGS.md#serve_model_name)). |
 | `PARTS_ROOT` | empty (the full pack) | Serve from per-Spark parts; set by `ring.parts.env.example` ([Per-Spark weight files](#per-spark-weight-files)). Run on our four Sparks at a 4,096-token window. |
@@ -327,21 +334,19 @@ To fill the ledger from one boot's outputs, lay them out as `card/fill-map.json`
 | `TF_HY4_ROW_COST_TABLE` | empty (the engine's built-in table) | Verify cost per batch width; sets how many tokens the drafter proposes. Measure yours (step 6). Changes speed, and can flip close calls ([more](launch/SETTINGS.md#tf_hy4_row_cost_table)). |
 | `TF_HY4_DRAFT_MIN_MARGIN` | off | Cuts a round's drafts where the drafter's top-two gap falls under this value, for example `0.85`. Ships off ([measured](card/QUALITY_CARD.md#draft-cutoff), [more](launch/SETTINGS.md#tf_hy4_draft_min_margin)). |
 | `TF_HY4_REPEAT_STABLE` | `1` (on) | With drafts on, the same prompt gives the same tokens. `"0"` turns it off; any value but `0` or `1` is refused ([more](launch/SETTINGS.md#tf_hy4_repeat_stable)). |
-| `TF_HY4_FAST_PREFILL` | `1` (on) | The faster prefill path for text requests. `"0"` gives the earlier build's prefill path ([more](launch/SETTINGS.md#tf_hy4_fast_prefill)). |
+| `TF_HY4_FAST_PREFILL` | `1` (on) | The faster prefill path for text requests. `"0"` turns it off: the slower path, with other rounding ([more](launch/SETTINGS.md#tf_hy4_fast_prefill)). |
 | `TF_HY4_PREFILL_AR` | `fp32` | How prefill adds the four Sparks' partial results: `fp32`, or `bf16`, faster with lower agreement ([more](launch/SETTINGS.md#tf_hy4_prefill_ar)). |
 | `TF_HY4_FAST_PREFILL_MIN_ROWS`, `TF_HY4_PREFILL_TIMERS` | empty (256 rows; timers off) | Shortest prompt, in tokens, that takes the fast path; per-stage prefill times in rank 0's log ([more](launch/SETTINGS.md#tf_hy4_fast_prefill)). |
 | `SERVE_VISION`, `TF_HY4_VISION_DIR` | `0` (off), empty | `1` serves still images; rank 0 reads the vision folder the second names, checked by preflight. Set in your copy of `ring.vision.env.example` ([more](launch/SETTINGS.md#serve_vision)). |
 | `GPU_CLOCK_CAP_MHZ`, `ENGINE_COMMIT` | empty | Receipts only: the clock cap you set and the engine commit you built, written to `launch_meta.json`. Changes nothing that runs. |
+
+</details>
 
 ## Per-Spark weight files
 
 Each Spark only needs the bytes its own rank reads. `bash tools/split_ranks.sh FULL_PACK OUT --check` cuts a full pack into `OUT/common/` (tensors every rank reads whole, such as the embedding table, norms, routers and scales) and `OUT/rank0/` to `OUT/rank3/` (that rank's slices of the experts, attention and output head), using the engine's own slicing code.
 
 `--check` re-reads every file against the SHA-256 recorded at export and every tensor against the source bytes it came from. A Spark downloads `common/` plus its own `rankN/` and points `--model` at `common/`. The loader refuses another rank's part, a part cut from a different pack, and a mix of full-pack and part files.
-
-On a 38-layer test pack of the lossless trunk build (layers 0 to 37, one DGX Spark), `common/` was 3.47 GB and `rank0/` 39.55 GB, 43.01 GB per Spark against 162.02 GB for the full pack.
-
-On the full quant (78 layers, `--trunk 4b6b`, the release `tf-hy4-oracle`, one DGX Spark, 2026-11-21), `common/` was 4.05 GB and each `rankN/` 75.69 GB: 79.74 GB per Spark against 371.84 GB for the full pack of both builds. The export took 950 s. With `--check`, which compared 598,517 tensors in 1,181 files and found 0 failures, the whole job took 4,103 s ([log](receipts/parts/split-78l-4b6b.log)).
 
 For the full quant, pass the same width as `TF_HY4_TRUNK` (`bash tools/split_ranks.sh FULL_PACK OUT --trunk 4b6b --check`). `tools/split_ranks.sh` hands `--trunk` and `--target-head` to the engine's exporter, which records them in the parts, and loading refuses a different width. The exporter must be a build that accepts both flags (`tf-hy4-oracle --help` lists them).
 
@@ -350,6 +355,13 @@ For the full quant, pass the same width as `TF_HY4_TRUNK` (`bash tools/split_ran
 ```bash
 bash launch/launch.sh --env-file launch/ring.env --env-file launch/ring.relay.env.example --env-file launch/ring.parts.env.example
 ```
+
+<details>
+<summary>Parts as measured on our Sparks: the split, the hand-out, the drafter folder and a launch</summary>
+
+On a 38-layer test pack of the lossless trunk build (layers 0 to 37, one DGX Spark), `common/` was 3.47 GB and `rank0/` 39.55 GB, 43.01 GB per Spark against 162.02 GB for the full pack.
+
+On the full quant (78 layers, `--trunk 4b6b`, the release `tf-hy4-oracle`, one DGX Spark, 2026-11-21), `common/` was 4.05 GB and each `rankN/` 75.69 GB: 79.74 GB per Spark against 371.84 GB for the full pack of both builds. The export took 950 s. With `--check`, which compared 598,517 tensors in 1,181 files and found 0 failures, the whole job took 4,103 s ([log](receipts/parts/split-78l-4b6b.log)).
 
 With both drafter settings set to `""` and no drafter folder, the server drafts with the BF16 drafter inside the parts instead. Every token is still the full model's pick, but the drafts are not the measured 4-bit drafter's, so that launch's speed is not known.
 
@@ -369,23 +381,34 @@ Each Spark printed `files=473 bytes=79706444762 tensors_compared=0 failures=0`, 
 
 It was ready in 48 s. Against the full-pack boot with the same settings, each Spark loaded in 27.5 to 43.1 s instead of 47.4 to 76.3 s, and the lowest `MemAvailable` was 37.23 GiB instead of 32.49 ([that boot](receipts/speed/exl3-4k-rs/boot-dfly.json)). No launch from parts has run at the 131,072-token window.
 
+</details>
+
 ## Repository contents
 
+<details>
+<summary>What each folder holds</summary>
+
+- `assets/`: the picture at the top of this page.
 - `quant/`: quantization scripts, the frozen 3.00-bit expert recipe, the 4-bit and 6-bit trunk recipes, and the quantizer patch (`quant/patches/0001-hy4-quant.patch`).
 - `serve/`: TensorFold build guide, patch generator and the port patch (`serve/patches/0001-hy4-port.patch`).
 - `launch/`: ring stagers, preflight, RDMA probe, launcher, settings files, the settings guide ([launch/SETTINGS.md](launch/SETTINGS.md)) and the weight manifest (`launch/weights.sha256`, for `sha256sum -c` in the weights folder).
 - `bench/`: benchmark client, needle test, prompts, the short-prompt first-token timer (`bench/ttft_sweep.py`), the agent-style tool loop (`bench/agent_loop.py`), and the image check (`bench/vision_check.py`, with its three images in `bench/images/`, two of them also as a JPEG and a WebP).
 - `eval/`: the top-1 agreement scorer and its public prefix set; the full-vocabulary BF16 reference panel and router audit, registered for a later run.
-- `card/`: model card, quality card, the claims ledger and the fill map. The pages that quote the ledger (this README, both cards, `FINDINGS.md`, `launch/RING-RDMA.md` and `quant/README.md`) are written from their templates in `card/templates/` by `python3 tools/render.py --all`, and `tools/fill_claims.py` rewrites them after each fill. A value not measured yet reads `(pending)`.
-  - The ledger also registers 135 measurements this release did not run: 98 in the `later` tier and 37 `stretch` claims. They read `pending` in `card/claims.json`, and no page shows a pending value.
+- `card/`: model card, quality card, the claims ledger and the fill map. The pages that quote the ledger (this README, both cards, `FINDINGS.md`, `launch/RING-RDMA.md`, `launch/SETTINGS.md` and `quant/README.md`) are written from their templates in `card/templates/` by `python3 tools/render.py --all`, and `tools/fill_claims.py` rewrites them after each fill. A value not measured yet reads `(pending)`.
+  - The ledger also registers 135 measurements this release did not run: 98 in the `later` tier and 37 `stretch` claims. They read `pending` in `card/claims.json` and appear on no page.
   - `next.speedbuild.*` holds the speed build's own measured rates, kept for comparison and shown on no page; the pages show the release build's values instead.
 - `receipts/`: the receipt behind each measured value in the ledger (the two GGUF baseline sizes cite our run notes instead); `tools/fill_claims.py` copies in the receipts of each fill.
 - `tools/`: kit checks, rendering, filling the ledger from boot outputs (`tools/fill_next.py` for this release's run), per-Spark splitting, the drafter folder for a launch from parts, and the vision folder (`tools/vit_folder.py`).
 - [FINDINGS.md](FINDINGS.md): measured results that hold beyond this pack.
 
-Rank order must match your physical ring cables, which `launch/preflight.sh` checks (`enp1s0f1*` to `enp1s0f0*` on separate `/24` subnets with one-hop routes); it refuses timed runs on `NET/Socket`. The pack carries DFly2 at source precision beside its 4-bit copy. It does not carry the vision tower, which is the separate `vit-bf16/` folder ([What is new](#what-is-new-against-the-earlier-build)).
+Rank order must match your physical ring cables, which `launch/preflight.sh` checks (`enp1s0f1*` to `enp1s0f0*` on separate `/24` subnets with one-hop routes); it refuses timed runs on `NET/Socket`. The pack carries DFly2 at source precision beside its 4-bit copy. It does not carry the vision tower, which is the separate `vit-bf16/` folder ([What you get](#what-you-get)).
+
+</details>
 
 ## What was not run
+
+<details>
+<summary>Runs this release did not make, and parts not yet run on the Sparks</summary>
 
 - The lossless trunk's 78-layer split has not been run; the full quant's has, and its check was clean ([Per-Spark weight files](#per-spark-weight-files)).
 - From parts, the full quant has run only at a 4,096-token window, not at 131,072.
@@ -393,18 +416,54 @@ Rank order must match your physical ring cables, which `launch/preflight.sh` che
 - The lossless trunk is not booted at 128K, where the memory gate does not let it run.
 - The full-vocabulary BF16 reference panel and router audit are registered for a later run.
 - The GGUF comparison (llama.cpp with Tencent's `AngelSlim/Hy4-GGUF`) and its matched panel in `card/claims.json` were not run.
-- The full RigMark standard suite has not completed on this rig ([RigMark](#rigmark)).
+- The full RigMark standard suite has not completed on this rig ([Development notes](#development-notes)).
 - This release's numbers were not measured at stock GPU clocks, only with the clocks capped at 2,200 MHz.
+- On the fixed build, only the 0.7 rows and the parity gate ran. Every other release-build value was measured before the sampling fix, on `ef8ebb7c`.
 - Agreement was measured on the speed build and the vision tower's closeness to PyTorch on the vision build, not on the release build. The image check and the image-request limits ran on the release build.
 - No independent review of the release build's vision code has run. A review of the vision build named four issues to fix first; the release build carries a change for each, not reviewed again.
-- The decode control, the earlier build's binary from a folder whose path has the release binary's length, was dropped for time.
 - Vision: still images only, checked on three images and three screenshots; no image benchmark and no video.
 - `serve/build_release.sh`, `launch/stage_binary.sh` and `bench/vision_check.py` are new in this release. Their host tests are `bench/test_vision_check.py`, `launch/test_receipt_reads.sh` and `tools/test_fill_next.py`, and their first run on the Sparks was the release run.
 - `serve/build_codecs.sh` is new. On 2026-11-22 it built both decoders on a Spark, each source matching its pinned SHA-256, and the release build's serve found both at boot (`receipts/next/release/codecs/`).
 - `tools/vit_folder.py` is new. On 2026-11-22 it built `vit-bf16/` from `tencent/Hy4` `c10c0de5` on a Spark, CPU only, with no network and the source read-only. All three files matched `launch/vision.sha256`, by its own `--check` and by a plain `sha256sum` (`receipts/next/release/vit-folder/`).
-- `bench/ttft_sweep.py` is new. Its one run is the table's, on the release build, and it has no host test.
-- Prefix reuse between requests is not in this release. Every request is read from its first token, so each turn of a conversation waits for its whole prompt ([open items](FINDINGS.md#open-items)).
+- `bench/ttft_sweep.py` is new. Its one run is the first-token table's, on the release build, and it has no host test.
 - `bench/agent_loop.py` is new and has no host test. Its three runs give the `"auto"` tool-call row and the two turns without prefix reuse, on the release build. Not covered: a real agent client, and a recorded thinking-on run.
+
+</details>
+
+## Development notes
+
+<details>
+<summary>Our own unpublished development build, and what was measured against it</summary>
+
+Before 1.0 we ran a development build of our own (engine `6e0fcf1ec`, kit `b5559f6`) and never published it. You do not need it for anything above. These facts compare against it or were measured on it. Its receipts stay in this repository (`receipts/next/prefill/base-2200/`), and `card/claims.json` names the receipt of every number.
+
+**Prefill.** At the same 2,200 MHz cap it prefilled 155.02 / 137.19 / 124.84 tok/s at 8K / 32K / 64K. Its 128K needle waited 1114.91 s for the first token, at stock clocks. `TF_HY4_FAST_PREFILL=0` gives its prefill path.
+
+**Decode.** At the same cap it decoded 38.37 / 19.50 / 55.48 tok/s on code / prose / structured. Both decode runs used RigMark's `--comparison-id` `2026-11-22-hy4-speed-team-2200mhz`, so the same prompts. Outputs against the development build's run: all 9 the same text, token for token, so the rates are like for like.
+
+The release does not change the greedy decode path, and these rows are greedy, so we make no faster or slower claim on decode. The binary's path alone moves decode by about 2%: the development build's own bytes, run from another folder, read 37.63 / 19.05 / 54.46 tok/s ([serve/BUILD.md](serve/BUILD.md#pin-the-build-container-cores-and-a-clean-cache)). A control run at the release binary's path length was dropped for time.
+
+**Output.** The fast prefill path rounds and sums differently, so its output is not bit-identical to the development build's. It rounds to BF16 in places the older path does not ([which](launch/SETTINGS.md#tf_hy4_fast_prefill)). The same prompt and seed, greedy included, can give a different answer than the development build gave.
+
+**Agreement.** At the positions behind the release's agreement rows, the development build agreed on 96.73% of the familiar set and 91.41% of the fresh set.
+
+**Measured on it.** The quality card's two-build table, at stock clocks, and the row-cost table the release ran with (2026-11-21). Load to ready on it: 79 s (full quant, 131,072-token window), 84 s (lossless trunk, 32,768-token window).
+
+**A RigMark run cut short.** The full standard suite ran on it on 2026-11-21 from 20:57 UTC, with the kit's launcher, drafts on, thinking off and stock clocks. At 22:25 UTC one Spark lost power ([open items](FINDINGS.md#open-items)), during the last 64K replay. RigMark wrote no receipt and no card, and the concurrency part never ran. So there is no RigMark result; the lines below are from the logs.
+
+| Cut-short run, one stream, decode | Code | Prose | Structured |
+| --- | --- | --- | --- |
+| tok/s, median of 5 runs | 38.4 | 19.1 | 55.3 |
+
+| Cut-short run, cold prefill | 8K | 32K | 64K |
+| --- | --- | --- | --- |
+| tok/s, median of 3 requests | 165.0 | 146.4 | 133.8 |
+
+These lines come from the benchmark client's own log and the server's log. RigMark's completion gates were not recorded for this run, and neither was its revision. All 15 decode replies ended by themselves. The 8 replays that finished gave the same output as their cold requests, within 0.2 tok/s.
+
+The 5 structured replies are the same 422 tokens as those of an earlier quick run, which passed its gates. The client prints a 64K pair only after its replay, so the third 64K cold rate is from the server's log: 65,536 tokens in 489.745 s. Logs: `receipts/rigmark-cut-short/`.
+
+</details>
 
 ## License
 

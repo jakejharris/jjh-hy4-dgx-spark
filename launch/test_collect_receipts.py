@@ -77,6 +77,20 @@ def main() -> int:
                   f"rank {r} weights_gib {info.get('weights_gib')} from the load line (want {weights}, {wbytes} bytes)")
         check(ranks[0].get("serve_resident_gib") == banner, f"rank 0 serve banner kept as serve_resident_gib {ranks[0].get('serve_resident_gib')} (want {banner})")
         check(all("serve_resident_gib" not in ranks[r] for r in (1, 2, 3)), "ranks 1 to 3 print no serve banner")
+        check(ranks[0].get("sampling") == "temperature 0.9, top_k -1, top_p 1" and all("sampling" not in ranks[r] for r in (1, 2, 3)),
+              f"rank 0's serving line sampling read (no --temperature flag on that boot): {ranks[0].get('sampling')!r}")
+
+    print("== the serving line's sampling part")
+    line = (FIX / "winc-128k" / "rank0_node1.log").read_text(encoding="utf-8").splitlines()
+    line = next(ln for ln in line if "] serving " in ln)
+    s07 = parse_line(cr, line.replace("temperature 0.9,", "temperature 0.7,"))
+    check(s07.get("sampling") == "temperature 0.7, top_k -1, top_p 1" and s07.get("drafts") == "DFly2" and s07.get("serve_context") == 131072,
+          f"--temperature 0.7: {s07.get('sampling')!r}, drafts and context still read")
+    sg = parse_line(cr, line.replace("temperature 0.9, top_k -1, top_p 1", "greedy"))
+    check(sg.get("sampling") == "greedy", f"--temperature 0: {sg.get('sampling')!r}")
+    si = parse_line(cr, line.replace("top_p 1;", "top_p 1; thinking off: temperature 0.7, top_p 0.8;"))
+    check(si.get("sampling") == "temperature 0.9, top_k -1, top_p 1" and si.get("drafts") == "DFly2",
+          f"a thinking-off set after it is not taken as the defaults: {si.get('sampling')!r}")
 
     print("== the load line with a further field, and without the repeat option (older engine)")
     real = (FIX / "winc-128k" / "rank1_node2.log").read_text(encoding="utf-8").splitlines()[-1]
@@ -123,7 +137,7 @@ def main() -> int:
     sha = "40188e7f905724278693a05dfa25f257ab8ba88a1db4ccf6eaaab894dc13570c"
     meta = {"RING_HOSTS": "node1 node2 node3 node4", "TENSORFOLD_BIN": "/opt/tensorfold/bin/tensorfold-native",
             "TF_HY4_FAST_PREFILL": "1", "TF_HY4_PREFILL_AR": "fp32", "SERVE_VISION": "1",
-            "TF_HY4_VISION_DIR": "/data/models/hy4-vit-bf16", "GPU_CLOCK_CAP_MHZ": "2200", "ENGINE_COMMIT": "abc1234",
+            "TF_HY4_VISION_DIR": "/data/models/hy4-vit-bf16", "GPU_CLOCK_CAP_MHZ": "2200", "ENGINE_COMMIT": "abc1234", "SERVE_TEMPERATURE": "0.7",
             "bin_sha256_by_rank": {str(r): sha for r in range(4)},
             "gpu_clock_mhz_at_launch_by_rank": {"0": "2184", "1": "2184", "2": "2177", "3": "2184"},
             "gpu_clock_mhz_at_ready_by_rank": {"0": "2184", "1": "2184", "2": "2184", "3": "2184"}}
@@ -149,8 +163,8 @@ def main() -> int:
             check(e.get("engine_commit") == "abc1234" and e.get("gpu_clock_cap_mhz") == "2200"
                   and e.get("gpu_clock_mhz_at_launch_by_rank", {}).get("2") == "2177",
                   f"commit {e.get('engine_commit')!r}, cap {e.get('gpu_clock_cap_mhz')!r}, launch snapshot kept")
-            check(all(ls.get(k) == meta[k] for k in ("TF_HY4_FAST_PREFILL", "TF_HY4_PREFILL_AR", "SERVE_VISION", "TF_HY4_VISION_DIR")),
-                  "switches in force kept in launch_settings")
+            check(all(ls.get(k) == meta[k] for k in ("TF_HY4_FAST_PREFILL", "TF_HY4_PREFILL_AR", "SERVE_VISION", "TF_HY4_VISION_DIR", "SERVE_TEMPERATURE")),
+                  "switches in force kept in launch_settings, SERVE_TEMPERATURE among them")
             check(e.get("problems") == [] and "WARNING" not in p.stderr, f"no problems on a full read: {e.get('problems')!r}")
             check(e.get("nccl_version_by_rank", {}).get("0") == "2.30.7+cuda13.3" and e["nccl_version_by_rank"].get("1") == "not printed",
                   f"NCCL version read from rank 0's log: {e.get('nccl_version_by_rank')!r}")

@@ -31,8 +31,10 @@ FORBIDDEN_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
 # The release's own public addresses (kit repository, weights repository), exact prefixes. Text inside them,
 # and their exact owner/name form (link text), is not matched against the forbidden patterns, so an owner's
 # handle may appear there and nowhere else.
-# Empty until the owner names the repositories.
-OWN_URLS: tuple[str, ...] = ("https://github.com/jakejharris/jjh-hy4-dgx-spark", "https://huggingface.co/jakejharris/jjh-hy4-exl3")
+# Empty until the owner names the repositories. The third is the kit repository's raw file address, which the
+# model card uses for the README's picture (assets/hero.jpg). Keep the tuple on one line: the publish link test
+# reads the line that starts with OWN_URLS.
+OWN_URLS: tuple[str, ...] = ("https://github.com/jakejharris/jjh-hy4-dgx-spark", "https://huggingface.co/jakejharris/jjh-hy4-exl3", "https://raw.githubusercontent.com/jakejharris/jjh-hy4-dgx-spark")
 
 # Each shipped patch, and the document that states its sha256.
 PATCHES = {

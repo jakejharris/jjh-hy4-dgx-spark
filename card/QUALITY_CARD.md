@@ -1,6 +1,6 @@
 # Hy4 EXL3 quality and serving card
 
-Version 1.0 of the recipe. The earlier build it compares with was not published ([README](../README.md)).
+Version 1.0 of the recipe. Where it compares with our development build, that build was not published ([README](../README.md#development-notes)).
 
 The EXL3 pack serves in two configurations. The **full quant** (default) packs the routed experts and the trunk (attention and shared experts); its output differs from the lossless trunk configuration. The **lossless trunk** keeps the same routed experts and leaves the trunk and the KV cache at source precision. Both run on TensorFold over four DGX Sparks.
 
@@ -21,7 +21,7 @@ Every speed and quality number the ledger fills from the release window (2026-11
 
 A number from an earlier engine names that engine where it appears.
 
-This release's engine merges two builds measured separately: speed step 2 (`tensorfold-native` SHA-256 `40188e7f905724278693a05dfa25f257ab8ba88a1db4ccf6eaaab894dc13570c`) for agreement, and the vision build (`ffa371fa401257ab17ba6ebc8e96d04efd9ea29b02c9d1e9b79f5cfbbefb0082`) for vision. Their numbers are the `next.*` claims ([README](../README.md#what-is-new-against-the-earlier-build)), with graphics clocks capped at 2,200 MHz. The release's prefill and decode rates come from the merged build (`ef8ebb7c87aa81ff4afe4bb43bb38d05f5dd4e4e`, branch `hy4-next`), whose binaries are:
+This release's engine merges two builds measured separately: speed step 2 (`tensorfold-native` SHA-256 `40188e7f905724278693a05dfa25f257ab8ba88a1db4ccf6eaaab894dc13570c`) for agreement, and the vision build (`ffa371fa401257ab17ba6ebc8e96d04efd9ea29b02c9d1e9b79f5cfbbefb0082`) for vision. Their numbers are the `next.*` claims ([README](../README.md#speed)), with graphics clocks capped at 2,200 MHz. The release's prefill and decode rates come from the merged build (`ef8ebb7c87aa81ff4afe4bb43bb38d05f5dd4e4e`, branch `hy4-next`), whose binaries are:
 
 | Binary | SHA-256 |
 | --- | --- |
@@ -29,9 +29,19 @@ This release's engine merges two builds measured separately: speed step 2 (`tens
 | `tf-hy4-oracle` | f8d84329fd8dcbe19494bfd9abb094bd26f5838b5425ec20919efeeaacbddac0 |
 | `hy4-boundary` | 0e364e59887a48716ef94c8bbfc016b3993881c5acd69644faea910a7e2b67db |
 
-**Where this release's prefill rounds to BF16.** The fast prefill rounds to BF16 in four places the earlier build's prefill keeps wider. The trunk's codebook values (FP16 there). Each expert's output, before the weighted sum of the top eight. The attention context, before the KV projection. And only with BF16 sums, each Spark's partial result before the sum across the four. Decode keeps the earlier build's precision.
+1.0 ships that build with one fix to sampled decode ([README](../README.md#reading-the-numbers)), 0c2ef40993b4d76b4b10f0bc79a84b77588e4874, whose binaries are:
 
-Effect on the speed build, out of 720 familiar and fresh positions agreeing with the BF16 reference: 680 with FP32 sums (the default), 674 with BF16 sums, 676 for the earlier build (`next.quality.*` in `card/claims.json`). Speed step 2's code review found these four; settings: [launch/SETTINGS.md](../launch/SETTINGS.md#tf_hy4_fast_prefill).
+| Binary | SHA-256 |
+| --- | --- |
+| `tensorfold-native` | 0ee50941342a2881990bf40eb76e572f043d383160b19c47dd8e9432b556ac68 |
+| `tf-hy4-oracle` | dedf276062f7ab995afdd40737d4601e634eeef61efdcb371c6b0dedacacae90 |
+| `hy4-boundary` | 0e364e59887a48716ef94c8bbfc016b3993881c5acd69644faea910a7e2b67db |
+
+On the fixed build, greedy and same-seed sampled requests gave the merged build's tokens exactly (greedy 2 of 2, same seed 8 of 8), so the values on this card stand for it.
+
+**Where this release's prefill rounds to BF16.** The fast prefill rounds to BF16 in four places our development build's prefill keeps wider. The trunk's codebook values (FP16 there). Each expert's output, before the weighted sum of the top eight. The attention context, before the KV projection. And only with BF16 sums, each Spark's partial result before the sum across the four. Decode keeps our development build's precision.
+
+Effect on the speed build, out of 720 familiar and fresh positions agreeing with the BF16 reference: 680 with FP32 sums (the default), 674 with BF16 sums, 676 for our development build (`next.quality.*` in `card/claims.json`). Speed step 2's code review found these four; settings: [launch/SETTINGS.md](../launch/SETTINGS.md#tf_hy4_fast_prefill).
 
 ## Agreement with the BF16 reference
 

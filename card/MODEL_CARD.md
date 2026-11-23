@@ -5,11 +5,15 @@ license_link: LICENSE
 base_model: tencent/Hy4
 ---
 
-# Hy4 EXL3
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jakejharris/jjh-hy4-dgx-spark/main/assets/hero.jpg" width="100%" alt="Four DGX Sparks carrying a giant penguin in a gold scarf. JJH HY4 1.0 for 4x DGX Sparks. 774B parameters. Four small boxes.">
+</p>
+
+# JJH HY4 1.0 for 4x DGX Sparks
 
 This is a quantized Derivative Work of the full [Tencent Hy4](https://huggingface.co/tencent/Hy4/tree/c10c0de5) checkpoint at `c10c0de5`. We changed the routed expert weights to EXL3 `mul1`, added packed copies of the attention and shared-expert weights (the trunk) beside the source ones, and repacked the checkpoint for the text runtime. The vision tower is not in the pack: it ships as a separate folder, `vit-bf16/`, its 649 tensors copied unchanged in BF16.
 
-Version 1.0, the first published release of this recipe. Where this card compares with an earlier build, that is our earlier build (engine `6e0fcf1ec`, kit `b5559f6`), which was not published; its receipts are in the [recipe's repository](https://github.com/jakejharris/jjh-hy4-dgx-spark) under `receipts/`.
+Version 1.0 of this recipe. Its receipts are in the [recipe's repository](https://github.com/jakejharris/jjh-hy4-dgx-spark) under `receipts/`.
 
 It runs in two configurations from the same files:
 
@@ -18,7 +22,7 @@ It runs in two configurations from the same files:
 
 ## What to expect
 
-The full quant on four DGX Sparks, each graphics clock capped at 2,200 MHz, drafts on, thinking off. Setups and the earlier build's rows are in the [README](https://github.com/jakejharris/jjh-hy4-dgx-spark#what-is-new-against-the-earlier-build).
+The full quant on four DGX Sparks, each graphics clock capped at 2,200 MHz, drafts on, thinking off. Measured on the recipe's engine before its sampling fix (`ef8ebb7c`); on the fixed build the recipe ships, greedy requests gave the same tokens. Setups are in the [README](https://github.com/jakejharris/jjh-hy4-dgx-spark#reading-the-numbers).
 
 | Default launch | tok/s |
 | --- | --- |
@@ -68,7 +72,7 @@ The full quant is the default launch; one overlay file selects the lossless trun
 
 Thinking is on by default. On one long coding task, greedy with thinking on, the reasoning used the whole 8,192-token reply before any answer started. At `temperature` 0 the task finished with `"thinking_budget"` 4096 or with `reasoning_effort` `no_think`.
 
-Sampled at 0.9, which the server uses when a request sends no `temperature`, it did not finish, with the budget or without it. Other temperatures and tasks are not measured yet (the recipe's `FINDINGS.md`, finding 6).
+Sampled at 0.9, Tencent's own default, or at 0.7, the recipe's launcher default for a request that sends no `temperature`, it did not finish, with the budget or without it. Other temperatures and tasks are not measured yet (the recipe's `FINDINGS.md`, finding 6).
 
 ## Fidelity and limits
 
@@ -91,7 +95,7 @@ The [quality card](https://github.com/jakejharris/jjh-hy4-dgx-spark/blob/main/ca
 
 Vision is off unless the launch asks for it (`SERVE_VISION=1` with the `vit-bf16/` folder on rank 0). It reads still images only, and its accuracy was checked on three images and three screenshots, not on a benchmark.
 
-Prefill in this recipe now takes a faster path, on by default. Its output is not bit-identical to the earlier build's: the same prompt and seed can give a different answer than before. The recipe's launch setting `TF_HY4_FAST_PREFILL=0` gives the earlier build's prefill path.
+Prefill in this recipe takes a faster path, on by default. The recipe's launch setting `TF_HY4_FAST_PREFILL=0` turns it off. The two paths round differently, so the same prompt and seed can give a different answer on each.
 
 With drafts on, every token is still the full model's own greedy pick, but it is checked in a wider batch, and BF16 rounds differently at another batch width. At a close call the pick can go the other way, and the text after it is a different continuation, so drafted output is not the same text as plain output; the quality card gives the measured counts.
 
@@ -99,7 +103,7 @@ The launch files turn on the repeat option (`TF_HY4_REPEAT_STABLE=1`), so with d
 
 ## License and notices
 
-Tencent Hy License, Version 1.0 applies to these weights. See the full [LICENSE](LICENSE). `tencent/Hy4` ships no NOTICE file. Our [NOTICE](NOTICE), beside the weights, carries the Appendix notice with the release copyright holder and year, and the change notice: it names every file we changed or added and says what changed. Tencent's name identifies their origin. The license supplies the warranty and liability terms.
+Tencent Hy License, Version 1.0 applies to these weights. See the full [LICENSE](https://huggingface.co/jakejharris/jjh-hy4-exl3/blob/main/LICENSE). `tencent/Hy4` ships no NOTICE file. Our [NOTICE](https://huggingface.co/jakejharris/jjh-hy4-exl3/blob/main/NOTICE), beside the weights, carries the Appendix notice with the release copyright holder and year, and the change notice: it names every file we changed or added and says what changed. Tencent's name identifies their origin. The license supplies the warranty and liability terms.
 
 The change notice in short: we changed or added 242 of the 251 files, all from `tencent/Hy4` revision `c10c0de5`. The `.safetensors` files are not altered to carry the notice, so the 238 we changed keep the SHA-256 sums verified on all four Sparks (`SHA256SUMS`).
 

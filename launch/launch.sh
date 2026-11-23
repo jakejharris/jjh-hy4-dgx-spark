@@ -84,6 +84,16 @@ if [[ -n "$SERVE_THINKING_BUDGET" && ! "$SERVE_THINKING_BUDGET" =~ ^[1-9][0-9]*$
   exit 2
 fi
 
+# Temperature: 0.7 in this kit. With the line missing or commented out, every rank gets --temperature 0.7, so a
+# request that sends no "temperature" is sampled at 0.7; top_p 1 and top_k -1 still come from Tencent's
+# generation_config.json, which is not changed. A request's own "temperature" wins, and 0 is greedy. Set it
+# empty (SERVE_TEMPERATURE="") to pass no flag, so that file decides (0.9); "0" makes greedy the default.
+SERVE_TEMPERATURE="${SERVE_TEMPERATURE-0.7}"
+if [[ -n "$SERVE_TEMPERATURE" && ! "$SERVE_TEMPERATURE" =~ ^([0-9]+|[0-9]*\.[0-9]+)$ ]]; then
+  echo "ERROR: SERVE_TEMPERATURE=\"${SERVE_TEMPERATURE}\"; use a number of 0 or more, for example \"0.7\" (the kit default) or \"0\" (greedy by default), or set it empty to pass no flag (Tencent's 0.9)." >&2
+  exit 2
+fi
+
 # Served model name: empty in this kit, so no flag is passed and the server answers to the model folder's last
 # part. A name passes --name NAME on every rank: letters, digits, dot, dash and underscore, starting with a
 # letter or digit.
@@ -335,6 +345,7 @@ NCCL_MIN_NCHANNELS="${NCCL_MIN_NCHANNELS:-}"
 SERVE_PARALLEL="${SERVE_PARALLEL:-1}"
 SERVE_DRAFTS="${SERVE_DRAFTS:-1}"  # set and checked above; on unless "0"
 SERVE_THINKING_BUDGET="${SERVE_THINKING_BUDGET:-}"  # set and checked above; empty passes no flag
+SERVE_TEMPERATURE="${SERVE_TEMPERATURE-0.7}"  # set and checked above; 0.7 when unset, empty passes no flag
 SERVE_MODEL_NAME="${SERVE_MODEL_NAME:-}"  # set and checked above; empty passes no flag
 # The container sees the model folder; with parts, the whole PARTS_ROOT, so rankN/ beside common/ is visible.
 MODEL_MOUNT="${MODEL_DIR}"
@@ -397,9 +408,13 @@ for r in 0 1 2 3; do
         DRAFT_ARGS=$(printf -- '--drafter %q' "${DRAFTER_DIR}")
       fi
     fi
-    # Empty budget: nothing is added, so the default command line stays byte for byte the same.
+    # Empty budget: nothing is added.
     if [[ -n "$SERVE_THINKING_BUDGET" ]]; then
       DRAFT_ARGS+="${DRAFT_ARGS:+ }$(printf -- '--thinking-budget %q' "${SERVE_THINKING_BUDGET}")"
+    fi
+    # Temperature: --temperature on every rank (0.7 unless set); empty adds nothing.
+    if [[ -n "$SERVE_TEMPERATURE" ]]; then
+      DRAFT_ARGS+="${DRAFT_ARGS:+ }$(printf -- '--temperature %q' "${SERVE_TEMPERATURE}")"
     fi
     if [[ -n "$SERVE_MODEL_NAME" ]]; then
       DRAFT_ARGS+="${DRAFT_ARGS:+ }$(printf -- '--name %q' "${SERVE_MODEL_NAME}")"
@@ -583,7 +598,7 @@ write_launch_meta() {
     "$NCCL_NET" "$NCCL_IB_HCA" "$NCCL_IB_GID_INDEX" \
     "$NCCL_IB_SUBNET_AWARE_ROUTING" "$NCCL_ALGO" "$NCCL_PROTO" \
     "${NCCL_MIN_NCHANNELS:-}" "${NCCL_MAX_NCHANNELS:-}" \
-    "$NCCL_CUMEM_ENABLE" "$NCCL_RUNTIME_CONNECT" "$TIMED_RUN" "${SERVE_THINKING_BUDGET:-}" \
+    "$NCCL_CUMEM_ENABLE" "$NCCL_RUNTIME_CONNECT" "$TIMED_RUN" "${SERVE_THINKING_BUDGET:-}" "${SERVE_TEMPERATURE:-}" \
     "${SERVE_MODEL_NAME:-}" "${PARTS_ROOT:-}" \
     "${TENSORFOLD_BIN:-}" "$TF_HY4_FAST_PREFILL" "$TF_HY4_PREFILL_AR" "${TF_HY4_FAST_PREFILL_MIN_ROWS:-}" \
     "${TF_HY4_PREFILL_TIMERS:-}" "$SERVE_VISION" "${SERVE_VISION_TOKENS:-}" "${TF_HY4_VISION_DIR:-}" \
@@ -607,7 +622,7 @@ keys = [
     "NCCL_NET", "NCCL_IB_HCA", "NCCL_IB_GID_INDEX",
     "NCCL_IB_SUBNET_AWARE_ROUTING", "NCCL_ALGO", "NCCL_PROTO",
     "NCCL_MIN_NCHANNELS", "NCCL_MAX_NCHANNELS",
-    "NCCL_CUMEM_ENABLE", "NCCL_RUNTIME_CONNECT", "TIMED_RUN", "SERVE_THINKING_BUDGET",
+    "NCCL_CUMEM_ENABLE", "NCCL_RUNTIME_CONNECT", "TIMED_RUN", "SERVE_THINKING_BUDGET", "SERVE_TEMPERATURE",
     "SERVE_MODEL_NAME", "PARTS_ROOT",
     "TENSORFOLD_BIN", "TF_HY4_FAST_PREFILL", "TF_HY4_PREFILL_AR", "TF_HY4_FAST_PREFILL_MIN_ROWS",
     "TF_HY4_PREFILL_TIMERS", "SERVE_VISION", "SERVE_VISION_TOKENS", "TF_HY4_VISION_DIR",

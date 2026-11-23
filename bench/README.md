@@ -75,6 +75,7 @@ Plain runs repeated exactly (three of three, every prompt). Drafted runs did not
 - `bench/bench.py`: ran every 4K measurement above on four Sparks on 2026-11-21 (TensorFold `TP=4`, 78 layers).
 - `bench/compare_tokens.py`: wrote the drafted-against-plain comparison of the same boots.
 - `bench/niah.py`: `generate` run as written on `2026-11-21` using the real Hy4 tokenizer and chat template to build `bench/prompts/niah-128k.txt` (`128,000` rendered tokens, `max_tokens=2048`) and `bench/prompts/niah-4k.txt` (`3,072` rendered tokens, `max_tokens=768`); `score` unit-tested on `7` synthetic pass/fail fixtures; `run` on the 128K boot not reported yet.
+- `bench/sampling_check.py`: run once on the Sparks, 2026-11-23, on the release build with the kit defaults (`receipts/next/release/temp07/`). What a request with no `temperature` gets from a serve the kit's launcher started (0.7, `SERVE_TEMPERATURE`), against greedy on the same serve, and finding 6's coding request at 0.7. It now also runs the decode requests with thinking off (`reasoning_effort` `no_think`), where the reply is the essay or the code itself; that run came before those rows, so its receipt has none. `tools/fill_next.py temp07` fills the README and finding 6 from it; `tools/test_fill_next.py` runs it against a fake server.
 
 ## 2. Registered for a later run: GGUF baseline (`AngelSlim/Hy4-GGUF`, `Hy4-STQ1_0.gguf`)
 

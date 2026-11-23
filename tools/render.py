@@ -41,6 +41,7 @@ TEMPLATES = {
     "card/templates/FINDINGS.md": "FINDINGS.md",
     "card/templates/RING-RDMA.md": "launch/RING-RDMA.md",
     "card/templates/quant-README.md": "quant/README.md",
+    "card/templates/SETTINGS.md": "launch/SETTINGS.md",
 }
 ONE_DECIMAL = re.compile(r"(?<![\d.])([+-]?\d+\.\d)(?!\d|\.\d)")
 SPACE_PERCENT = re.compile(r"(\d) %")

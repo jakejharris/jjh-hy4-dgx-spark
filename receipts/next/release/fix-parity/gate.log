@@ -1,0 +1,51 @@
+Gate target: http://127.0.0.1:18080  model=frozen-78l-dfly  kit=kit  log=client_timing
+[PASS] greedy_prose: got=(sha=8b79a11dbefc,tok=2048) expect=(sha=8b79a11dbefc,tok=2048) tok/s=24.0 ms/round=80.03
+[PASS] greedy_code: got=(sha=0727ba09ffd1,tok=2048) expect=(sha=0727ba09ffd1,tok=2048) tok/s=26.0 ms/round=95.83
+[PASS] seed_prose_1: got=(sha=250853cde842,tok=2048) expect=(sha=250853cde842,tok=2048) tok/s=22.0 ms/round=84.87
+[PASS] seed_prose_2: got=(sha=fa55fec65d1e,tok=2048) expect=(sha=fa55fec65d1e,tok=2048) tok/s=19.2 ms/round=72.43
+[PASS] seed_prose_3: got=(sha=6944867e4434,tok=2048) expect=(sha=6944867e4434,tok=2048) tok/s=21.4 ms/round=85.75
+[PASS] seed_code_1: got=(sha=d66c7677302d,tok=2048) expect=(sha=d66c7677302d,tok=2048) tok/s=21.6 ms/round=84.70
+[PASS] seed_code_2: got=(sha=817a449a48a7,tok=2048) expect=(sha=817a449a48a7,tok=2048) tok/s=20.6 ms/round=84.68
+[PASS] seed_code_3: got=(sha=a247c0b55c20,tok=2048) expect=(sha=a247c0b55c20,tok=2048) tok/s=22.7 ms/round=96.03
+[PASS] seed_f6_budget_4096: got=(sha=5042361f3953,tok=8192) expect=(sha=5042361f3953,tok=8192) tok/s=22.5 ms/round=102.64
+[PASS] seed_f6_no_budget: got=(sha=e6f00660c85c,tok=8192) expect=(sha=e6f00660c85c,tok=8192) tok/s=21.4 ms/round=101.45
+[PASS] speed_code_greedy: got=(http=200,tok=2048,rt=0) expect=(HTTP200,no_think,finite) tok/s=35.7 ms/round=120.07
+[PASS] speed_code_07_1: got=(http=200,tok=2048,rt=0) expect=(HTTP200,no_think,finite) tok/s=34.3 ms/round=124.04
+[PASS] speed_code_07_2: got=(http=200,tok=2048,rt=0) expect=(HTTP200,no_think,finite) tok/s=34.6 ms/round=122.07
+[PASS] speed_code_07_3: got=(http=200,tok=2048,rt=0) expect=(HTTP200,no_think,finite) tok/s=35.3 ms/round=124.45
+[PASS] other_draft_false: got=(http=200,offered=0,tok=128) expect=(HTTP200,offered=0) tok/s=16.9 ms/round=59.02
+[PASS] other_image_07: got=(http=200,ok) expect=(HTTP200,card_exact) tok/s=42.8 ms/round=111.10
+[PASS] other_think_budget_4096: got=(http=200,rt=4097,ans=1986B) expect=(HTTP200,rt<=4104,ans>0) tok/s=20.4 ms/round=91.25
+[PASS] other_top_p_09: got=(http=200,tok=256,finish=length) expect=(HTTP200,top_p=0.9) tok/s=22.9 ms/round=83.74
+
+== Speed Summary (short-code.txt, thinking off, 2,048 max_tokens)
+case               temp  source  tokens  rounds  offered  accepted  ms/round  tok/s  finish
+-----------------  ----  ------  ------  ------  -------  --------  --------  -----  ------
+speed_code_greedy  0     client  2048    478     2385     1569      120.07    35.67  length
+speed_code_07_1    0.7   client  2048    481     2422     1567      124.04    34.31  length
+speed_code_07_2    0.7   client  2048    484     2334     1564      122.07    34.65  length
+speed_code_07_3    0.7   client  2048    466     2347     1581      124.45    35.30  length
+
+== Gate Summary
+case                     suite      status  tokens  sha           expected                   observed                        ms/rnd  tok/s
+-----------------------  ---------  ------  ------  ------------  -------------------------  ------------------------------  ------  -----
+greedy_prose             greedy     PASS    2048    8b79a11dbefc  sha=8b79a11dbefc,tok=2048  sha=8b79a11dbefc,tok=2048       80.03   24.0 
+greedy_code              greedy     PASS    2048    0727ba09ffd1  sha=0727ba09ffd1,tok=2048  sha=0727ba09ffd1,tok=2048       95.83   26.0 
+seed_prose_1             seed_0.7   PASS    2048    250853cde842  sha=250853cde842,tok=2048  sha=250853cde842,tok=2048       84.87   22.0 
+seed_prose_2             seed_0.7   PASS    2048    fa55fec65d1e  sha=fa55fec65d1e,tok=2048  sha=fa55fec65d1e,tok=2048       72.43   19.2 
+seed_prose_3             seed_0.7   PASS    2048    6944867e4434  sha=6944867e4434,tok=2048  sha=6944867e4434,tok=2048       85.75   21.4 
+seed_code_1              seed_0.7   PASS    2048    d66c7677302d  sha=d66c7677302d,tok=2048  sha=d66c7677302d,tok=2048       84.70   21.6 
+seed_code_2              seed_0.7   PASS    2048    817a449a48a7  sha=817a449a48a7,tok=2048  sha=817a449a48a7,tok=2048       84.68   20.6 
+seed_code_3              seed_0.7   PASS    2048    a247c0b55c20  sha=a247c0b55c20,tok=2048  sha=a247c0b55c20,tok=2048       96.03   22.7 
+seed_f6_budget_4096      seed_0.7   PASS    8192    5042361f3953  sha=5042361f3953,tok=8192  sha=5042361f3953,tok=8192       102.64  22.5 
+seed_f6_no_budget        seed_0.7   PASS    8192    e6f00660c85c  sha=e6f00660c85c,tok=8192  sha=e6f00660c85c,tok=8192       101.45  21.4 
+speed_code_greedy        speed      PASS    2048    8b882f86fbb9  HTTP200,no_think,finite    http=200,tok=2048,rt=0          120.07  35.7 
+speed_code_07_1          speed      PASS    2048    63df933f1bfa  HTTP200,no_think,finite    http=200,tok=2048,rt=0          124.04  34.3 
+speed_code_07_2          speed      PASS    2048    256350190159  HTTP200,no_think,finite    http=200,tok=2048,rt=0          122.07  34.6 
+speed_code_07_3          speed      PASS    2048    ffb11cd4c5c3  HTTP200,no_think,finite    http=200,tok=2048,rt=0          124.45  35.3 
+other_draft_false        other_0.7  PASS    128     7e1db9cc9684  HTTP200,offered=0          http=200,offered=0,tok=128      59.02   16.9 
+other_image_07           other_0.7  PASS    20      3a25eaa3d6bc  HTTP200,card_exact         http=200,ok                     111.10  42.8 
+other_think_budget_4096  other_0.7  PASS    4608    6d5e9736dea2  HTTP200,rt<=4104,ans>0     http=200,rt=4097,ans=1986B      91.25   20.4 
+other_top_p_09           other_0.7  PASS    256     8aa4b8e1adff  HTTP200,top_p=0.9          http=200,tok=256,finish=length  83.74   22.9 
+
+OVERALL: PASS (18/18 checks passed)
