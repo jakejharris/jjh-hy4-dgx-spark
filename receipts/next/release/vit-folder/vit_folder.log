@@ -1,0 +1,57 @@
+kit_head=f1d56a5 host=node3 src_dir=~/models/tencent--Hy4-c10c0de5
+=== Step 1: vit_folder.py build (CPU-only, --network none, source :ro) ===
+
+=============
+== PyTorch ==
+=============
+
+NVIDIA Release 26.07 (build 373437299)
+PyTorch Version 2.13.0a0+9186a08
+Container image Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+Copyright (c) 2014-2024 Facebook Inc.
+Copyright (c) 2011-2014 Idiap Research Institute (Ronan Collobert)
+Copyright (c) 2012-2014 Deepmind Technologies    (Koray Kavukcuoglu)
+Copyright (c) 2011-2012 NEC Laboratories America (Koray Kavukcuoglu)
+Copyright (c) 2011-2013 NYU                      (Clement Farabet)
+Copyright (c) 2006-2010 NEC Laboratories America (Ronan Collobert, Leon Bottou, Iain Melvin, Jason Weston)
+Copyright (c) 2006      Idiap Research Institute (Samy Bengio)
+Copyright (c) 2001-2004 Idiap Research Institute (Ronan Collobert, Samy Bengio, Johnny Mariethoz)
+Copyright (c) 2015      Google Inc.
+Copyright (c) 2015      Yangqing Jia
+Copyright (c) 2013-2016 The Caffe contributors
+All rights reserved.
+
+Various files include modifications (c) NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+GOVERNING TERMS: The software and materials are governed by the NVIDIA Software License Agreement
+(found at https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/)
+and the Product-Specific Terms for NVIDIA AI Products
+(found at https://www.nvidia.com/en-us/agreements/enterprise-software/product-specific-terms-for-ai-products/).
+
+WARNING: The NVIDIA Driver was not detected.  GPU functionality will not be available.
+   Use the NVIDIA Container Toolkit to start this container with GPU support; see
+   https://docs.nvidia.com/datacenter/cloud-native/ .
+
+NOTE: The SHMEM allocation limit is set to the default of 64MB.  This may be
+   insufficient for PyTorch.  NVIDIA recommends the use of the following flags:
+   docker run --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 ...
+
+vit_folder: 649 vit.* tensors, 2470253568 payload bytes, from 8 shards
+vit_folder: wrote /out/vit.safetensors (2470326144 bytes) and SHA256SUMS in 1.94 s
+vit.safetensors: OK
+config.json: OK
+processor_config.json: OK
+vit_folder check: 3 of 3 files match launch/vision.sha256
+build_rc=0
+=== Step 2: vit_folder.py --check ===
+vit.safetensors: OK
+config.json: OK
+processor_config.json: OK
+vit_folder check: 3 of 3 files match launch/vision.sha256
+check_rc=0
+=== Step 3: independent sha256sum vs launch/vision.sha256 ===
+c9fc83f677feca6e3561d30f49249912d4583bf186903690df071b24b19a1bdc  vit.safetensors
+dab00b0f4c9265f650eabccc1033bd6aa29080cf1459856a9f2a06ae074d7714  config.json
+5253bf7386f1c5090ba51ed69fe9c9ca2025c94d8f38eb0566e4b497014fa2f9  processor_config.json
+independent_match=3of3
+SCRATCH_REMOVED_OK

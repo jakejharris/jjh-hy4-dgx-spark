@@ -1,0 +1,17 @@
+{
+  "claim_id": "systems.load.cold.lossless",
+  "generated_utc": "2026-11-21T16:15:44Z",
+  "label": "78l-lossless-32k-dfly4b-relay",
+  "isolation": "quiet",
+  "unit": "s",
+  "value": 84.0,
+  "serve_load_s": 83.8,
+  "max_rank_load_s": 80.37,
+  "per_rank_load_s": {
+    "0": 78.97,
+    "1": 80.37,
+    "2": 47.76,
+    "3": 75.43
+  },
+  "status": "measured"
+}

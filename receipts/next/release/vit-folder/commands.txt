@@ -1,0 +1,7 @@
+# Host: node3 (holds ~/models/tencent--Hy4-c10c0de5; kit head f1d56a5)
+# 1. Build (CPU-only, no --gpus, --network none, source :ro)
+ssh node3 "docker run --rm --network none -u 1000:1000 -v ~/models/tencent--Hy4-c10c0de5:/src:ro -v /tmp/hy4-vit-folder-test/kit:/kit:ro -v /tmp/hy4-vit-folder-test/out:/out nvcr.io/nvidia/pytorch:26.07-py3 python3 /kit/tools/vit_folder.py /src /out"
+# 2. Check
+ssh node3 "python3 /tmp/hy4-vit-folder-test/kit/tools/vit_folder.py --check /tmp/hy4-vit-folder-test/out"
+# 3. Independent sha256sum
+ssh node3 "cd /tmp/hy4-vit-folder-test/out && sha256sum vit.safetensors config.json processor_config.json"

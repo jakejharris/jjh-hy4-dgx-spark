@@ -1,0 +1,20 @@
+{
+ "request": {
+  "model": "frozen-78l-dfly",
+  "max_tokens": 1024,
+  "messages": [
+   {
+    "role": "user",
+    "content": "Name one city in Texas. Answer as JSON with the key city."
+   }
+  ],
+  "response_format": {
+   "type": "json_object"
+  }
+ },
+ "result": {
+  "status": 400,
+  "seconds": 0.01,
+  "error_message": "structured output (response_format and the guided_* fields) is not supported by this engine yet"
+ }
+}

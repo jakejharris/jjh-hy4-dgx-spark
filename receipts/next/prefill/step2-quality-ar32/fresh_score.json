@@ -1,0 +1,20 @@
+{
+  "utc": "2026-11-22T17:02:48Z",
+  "label": "step2-quality-ar32",
+  "teacher_kind": "teacher_all(96x384)",
+  "positions_scored": 384,
+  "overall_matched": 351,
+  "overall_pct": 91.406,
+  "prose_matched": 170,
+  "prose_total": 192,
+  "prose_pct": 88.542,
+  "code_matched": 181,
+  "code_total": 192,
+  "code_pct": 94.271,
+  "margin_lt1_matched": 85,
+  "margin_lt1_total": 113,
+  "margin_lt1_pct": 75.221,
+  "margin_ge1_matched": 266,
+  "margin_ge1_total": 271,
+  "margin_ge1_pct": 98.155
+}

@@ -1,0 +1,20 @@
+{
+  "utc": "2026-11-21T14:28:48Z",
+  "label": "lossless",
+  "teacher_kind": "teacher_all(84x384)",
+  "positions_scored": 336,
+  "overall_matched": 326,
+  "overall_pct": 97.024,
+  "prose_matched": 140,
+  "prose_total": 144,
+  "prose_pct": 97.222,
+  "code_matched": 186,
+  "code_total": 192,
+  "code_pct": 96.875,
+  "margin_lt1_matched": 13,
+  "margin_lt1_total": 18,
+  "margin_lt1_pct": 72.222,
+  "margin_ge1_matched": 313,
+  "margin_ge1_total": 318,
+  "margin_ge1_pct": 98.428
+}

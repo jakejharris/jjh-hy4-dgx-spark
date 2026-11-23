@@ -1,0 +1,17 @@
+{
+  "claim_id": "systems.load.cold.exl3",
+  "generated_utc": "2026-11-22T21:59:46Z",
+  "label": "release-window1",
+  "isolation": "quiet",
+  "unit": "s",
+  "value": 81.0,
+  "serve_load_s": 79.1,
+  "max_rank_load_s": 74.98,
+  "per_rank_load_s": {
+    "0": 73.72,
+    "1": 74.98,
+    "2": 46.98,
+    "3": 60.35
+  },
+  "status": "measured"
+}

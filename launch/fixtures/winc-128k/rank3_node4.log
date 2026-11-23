@@ -1,0 +1,4 @@
+# Excerpt of the rank 3 log, the 128K boot, full quant 4b6b at 131,072 tokens (2026-11-21): only the lines launch/collect_receipts.py reads.
+# Host names redacted to node1-node4 in rank order.
+node4:1:1 [0] NCCL INFO Using network IB
+info: Hy4 (hy_v4_vl, tp=4 rank=3) loaded in 68.45 s: 78 layers, 1 stream, 11.63 GiB lossless BF16 KV/stream at 131072 window, weights=75.22 GiB (weight_bytes=80764690564), room_after_reserve=25.99 GiB, trunk=4b6b, drafter=DFly2 4-bit, head=fp32, repeat_stable=on

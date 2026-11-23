@@ -1,0 +1,12 @@
+{
+  "claim_id": "systems.kv.pool.exl3",
+  "generated_utc": "2026-11-21T15:50:05Z",
+  "label": "78l-4b6b-128k-dfly4b-relay",
+  "isolation": "quiet",
+  "unit": "tokens",
+  "value": 131072,
+  "streams": 1,
+  "context_window": 131072,
+  "kv_gib_per_stream": 11.63,
+  "status": "measured"
+}

@@ -1,0 +1,1 @@
+Write a clear, well-structured essay of about 350 words explaining how a four-node ring network moves tensors during distributed neural network inference, covering latency, bandwidth, and failure recovery.

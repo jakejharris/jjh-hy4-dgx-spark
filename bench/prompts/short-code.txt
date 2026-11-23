@@ -1,0 +1,1 @@
+Write a clean, self-contained Python 3 module implementing a thread-safe LRU cache with per-key TTL expiration, supporting get, put, delete, and stats methods, followed by a brief unittest test suite.

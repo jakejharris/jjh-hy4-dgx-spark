@@ -1,0 +1,12 @@
+{
+  "claim_id": "systems.kv.pool.lossless",
+  "generated_utc": "2026-11-21T16:15:44Z",
+  "label": "78l-lossless-32k-dfly4b-relay",
+  "isolation": "quiet",
+  "unit": "tokens",
+  "value": 32768,
+  "streams": 1,
+  "context_window": 32768,
+  "kv_gib_per_stream": 2.91,
+  "status": "measured"
+}

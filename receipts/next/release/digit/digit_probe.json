@@ -1,0 +1,119 @@
+{
+ "model": "frozen-78l-dfly",
+ "utc": "2026-11-22T23:13:44Z",
+ "question": "What two-digit number is written in the center, and what colors are the left half and right half? Reply in one short sentence.",
+ "rows": [
+  {
+   "format": "jpg",
+   "draft": true,
+   "logprobs": false,
+   "status": 200,
+   "seconds": 2.33,
+   "answer": "The number 14 is in the center, with a red left half and a blue right half.",
+   "finish_reason": "stop",
+   "usage": {
+    "prompt_tokens": 325,
+    "completion_tokens": 21,
+    "total_tokens": 346,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+     "reasoning_tokens": 0
+    }
+   }
+  },
+  {
+   "format": "jpg",
+   "draft": false,
+   "logprobs": false,
+   "status": 200,
+   "seconds": 2.82,
+   "answer": "The number 74 is in the center, with a red left half and a blue right half.",
+   "finish_reason": "stop",
+   "usage": {
+    "prompt_tokens": 325,
+    "completion_tokens": 21,
+    "total_tokens": 346,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+     "reasoning_tokens": 0
+    }
+   }
+  },
+  {
+   "format": "png",
+   "draft": true,
+   "logprobs": false,
+   "status": 200,
+   "seconds": 2.22,
+   "answer": "The number 14 is in the center, with a red left half and a blue right half.",
+   "finish_reason": "stop",
+   "usage": {
+    "prompt_tokens": 325,
+    "completion_tokens": 21,
+    "total_tokens": 346,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+     "reasoning_tokens": 0
+    }
+   }
+  },
+  {
+   "format": "png",
+   "draft": false,
+   "logprobs": false,
+   "status": 200,
+   "seconds": 2.79,
+   "answer": "The number 74 is in the center, with a red left half and a blue right half.",
+   "finish_reason": "stop",
+   "usage": {
+    "prompt_tokens": 325,
+    "completion_tokens": 21,
+    "total_tokens": 346,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+     "reasoning_tokens": 0
+    }
+   }
+  },
+  {
+   "format": "jpg",
+   "draft": true,
+   "logprobs": true,
+   "status": 400,
+   "seconds": 0.02,
+   "error_message": "logprobs are not supported by this model or backend"
+  },
+  {
+   "format": "jpg",
+   "draft": false,
+   "logprobs": true,
+   "status": 400,
+   "seconds": 0.02,
+   "error_message": "logprobs are not supported by this model or backend"
+  },
+  {
+   "format": "png",
+   "draft": true,
+   "logprobs": true,
+   "status": 400,
+   "seconds": 0.02,
+   "error_message": "logprobs are not supported by this model or backend"
+  },
+  {
+   "format": "png",
+   "draft": false,
+   "logprobs": true,
+   "status": 400,
+   "seconds": 0.02,
+   "error_message": "logprobs are not supported by this model or backend"
+  }
+ ]
+}

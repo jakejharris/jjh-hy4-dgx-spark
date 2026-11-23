@@ -1,0 +1,125 @@
+{
+  "utc": "2026-11-21T20:32:57Z",
+  "parts_root": "~/hy4/int/parts-78l-4b6b",
+  "routes": [
+    "node1->node3=192.168.102.11(enp1s0f0np0)",
+    "node1->node2=192.168.101.10(enp1s0f1np1)",
+    "node2->node4=192.168.100.12(enp1s0f1np1)"
+  ],
+  "source_hash_wall_s": 404.06,
+  "copy_wall_s": 2404.67,
+  "readback_verify_wall_s": 108.59,
+  "total_wall_s": 2928.09,
+  "pruned_source_others": true,
+  "source_parts": {
+    "common": {
+      "files": 244,
+      "bytes": 4054555605
+    },
+    "rank0": {
+      "files": 238,
+      "bytes": 75689916292
+    },
+    "rank1": {
+      "files": 238,
+      "bytes": 75689916292
+    },
+    "rank2": {
+      "files": 238,
+      "bytes": 75689916292
+    },
+    "rank3": {
+      "files": 238,
+      "bytes": 75689916292
+    }
+  },
+  "destinations": {
+    "node2": {
+      "parts": [
+        "common",
+        "rank1"
+      ],
+      "verified_files": 482,
+      "expected_files": 482,
+      "verified_bytes": 79744471897,
+      "copied_files": 482,
+      "skipped_files": 0,
+      "copied_bytes": 79744471897
+    },
+    "node4": {
+      "parts": [
+        "common",
+        "rank2"
+      ],
+      "verified_files": 482,
+      "expected_files": 482,
+      "verified_bytes": 79744471897,
+      "copied_files": 482,
+      "skipped_files": 0,
+      "copied_bytes": 79744471897
+    },
+    "node3": {
+      "parts": [
+        "common",
+        "rank3"
+      ],
+      "verified_files": 482,
+      "expected_files": 482,
+      "verified_bytes": 79744471897,
+      "copied_files": 482,
+      "skipped_files": 0,
+      "copied_bytes": 79744471897
+    }
+  },
+  "final_layout": {
+    "node1": {
+      "dirs": [
+        "common",
+        "rank0"
+      ],
+      "du_bytes": {
+        "common": 4054555605,
+        "rank0": 75689916292
+      },
+      "total_bytes": 79744471897,
+      "df_line": "/dev/nvme0n1p2     3755G 2751G      814G  78% /"
+    },
+    "node2": {
+      "dirs": [
+        "common",
+        "rank1"
+      ],
+      "du_bytes": {
+        "common": 4054555605,
+        "rank1": 75689916292
+      },
+      "total_bytes": 79744471897,
+      "df_line": "/dev/nvme0n1p2     3755G 2798G      767G  79% /"
+    },
+    "node4": {
+      "dirs": [
+        "common",
+        "rank2"
+      ],
+      "du_bytes": {
+        "common": 4054555605,
+        "rank2": 75689916292
+      },
+      "total_bytes": 79744471897,
+      "df_line": "/dev/nvme0n1p2     3755G 2720G      845G  77% /"
+    },
+    "node3": {
+      "dirs": [
+        "common",
+        "rank3"
+      ],
+      "du_bytes": {
+        "common": 4054555605,
+        "rank3": 75689916292
+      },
+      "total_bytes": 79744471897,
+      "df_line": "/dev/nvme0n1p2     3755G 3398G      167G  96% /"
+    }
+  },
+  "status": "PASS"
+}

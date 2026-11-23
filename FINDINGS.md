@@ -1,0 +1,119 @@
+# Measured Findings
+
+Each result below was measured on DGX Sparks (GB10) with Tencent's Hy4 checkpoint `c10c0de5`, and states its setup. Findings 1, 2 and 5 are properties of the model's weights and activations. Finding 3 is about splitting this model across four Sparks, and finding 4 is about NCCL on a switchless cable ring. Finding 6 is about thinking on, measured on one coding task, and finding 7 about drafts on, seen on one picture.
+
+## 1. 3 bits or 4 bits for the routed experts' down projection
+
+- **Setup**: one DGX Spark in `nvcr.io/nvidia/pytorch:26.07-py3`. Calibration on 250 rows of 2,048 tokens and a held-out check on 8 rows of 1,024 tokens, using the true BF16 inputs to layers 21, 39 and 57 (full token indexer, shared indexer, full). Uniform 3.00 bits per weight was compared with 3.33 (4-bit `down_proj`, everything else at 3 bits), each against the BF16 layer.
+- **Measured**: 4-bit `down_proj` cut the MoE output's cosine loss by 44.81% at layer 21 (0.006256 to 0.003453, row-subset spread 1.80%), by 7.49% at layer 39 (0.035625 to 0.032955, spread 8.42%) and by 6.84% at layer 57 (0.044910 to 0.041840, spread 8.36%). At 3.33 bits, weights plus a 128K BF16 KV cache came to 86.8 + 11.625 = 98.425 GiB on one Spark and left 16.6 GiB available over two 60-second holds. Because the gain at depth was about 7% and cost 23 GB more on disk (5.4 GiB more per Spark), the recipe keeps every routed layer at 3.00 bits (`quant/recipe-l20-76.yaml`). Worth a follow-up: 4 bits on early-layer `down_proj` only, where the gain was large.
+
+## 2. At depth, router choices matter more than expert precision
+
+- **Setup**: the same true inputs at layers 21, 39 and 57, 65,536 token-to-expert picks per layer, running each layer unquantized in FP16 on ExLlamaV3's execution path against the BF16 reference.
+- **Measured**: the router's expert picks differed from BF16 on 1.21% of picks at layer 21 (796 of 65,536; MoE output cosine loss 0.000614), 34.26% at layer 39 (22,454; 0.029624) and 37.34% at layer 57 (24,468; 0.035265). Deep in the model, router disagreement from FP16 arithmetic alone causes more MoE output error than the difference between 3-bit and 4-bit `down_proj` in finding 1.
+
+## 3. Why four Sparks are not bit-equal to one
+
+- **Setup**: real layers 0 to 3 and 0 to 15 of this build, run on four Sparks (stock NCCL IB) and on one Spark with the same inputs. The selection audit used the 16-layer slice on a 2,560-token prompt (the start of the 32K test prompt, long enough for the token indexer to prune keys on 512 rows) and recomputed every router and indexer score in FP32 on the CPU.
+- **Repeatable**: two fresh four-Spark runs on the same inputs are bit-exact (cosine loss 4.53e-14 on 4 layers and 5.33e-14 on 16 layers; 48 of 48 greedy tokens equal).
+- **Where four and one part**: each Spark computes a quarter of every matrix product; the four partial results are summed in FP32 in rank order and rounded to BF16. (This release's fast prefill sums prompt rows with a ring all-reduce instead, in FP32 by default; decode still sums in rank order. The numbers below are from the earlier build's engine.) The residual stream is stored in BF16, so one rounding step at layer 0 (cosine loss 2.15e-6; 81.74% of values bit-identical) moves the FP32 scores at layer 1 by a median of 1.15e-4 for the router and 2.12e-3 for the indexer.
+- **Which picks flip**: only near-ties. At layer 1, the 71 rows whose top-8 experts changed had a median gap of 2.15e-4 between the 8th and 9th expert, 16 times smaller than the 2,489 rows that did not change (3.43e-3). The rows whose top-2,048 keys changed had a median gap of 6.92e-4 at the cut, against 4.15e-3 for the rest. No pick flipped at a gap well above the rounding shift.
+- **What a flip does**: a changed expert is what moves the output. At layer 1, rows with an expert flip carried 222 times the hidden-state error of rows with none (cosine loss 1.36e-3 against 6.13e-6); rows where only the attended keys changed (1.46 of 2,048 on average) showed no added error (5.85e-6).
+- **End to end**: at 32K, four Sparks against one gave cosine loss 1.44e-5 and 48 of 48 greedy tokens equal on 4 layers, and cosine loss 1.74e-3 on 16 layers, where the first token matched and 25 of 48 greedy tokens matched before the sequences parted.
+
+## 4. Stock NCCL over a switchless cable ring
+
+- **Setup**: two and four Sparks cabled directly at 200 Gb/s RoCE (`f1` to `f0`, each cable on its own /24 subnet), stock NCCL 2.30.7 in `nvcr.io/nvidia/pytorch:26.07-py3`.
+- **Measured**: by default NCCL's IB transport fails at queue-pair setup (`ibv_modify_qp` errno 110, `INIT` to `RTR`). The socket transport works but took 619.4055 ms (component; spread: 489.608 to 749.203 ms across run medians) for the 156 gathers of one decode step. Seven settings bring up `Using network IB`: `NCCL_IB_SUBNET_AWARE_ROUTING=1`, `NCCL_IB_SUBNET_PREFIX_LEN=24`, `NCCL_IB_MERGE_NICS=0`, `NCCL_CROSS_NIC=1`, `NCCL_ALGO=Ring`, `NCCL_CUMEM_ENABLE=1` and `NCCL_RUNTIME_CONNECT=1`. The same 156 gathers then took 13.6225 ms (component; spread: 10.613 to 16.632 ms across run medians) on four Sparks and 8.227 ms (component; spread: p95 8.473 ms, max 8.527 ms) on two. `launch/RING-RDMA.md` explains each setting.
+
+## 5. The shared expert overflows FP16 at layers 75 and 76
+
+- **Setup**: layers 57 to 77 replayed on one Spark from 32 calibration rows of 2,048 tokens, with BF16 streams and the original BF16 weights, comparing the shared expert computed in FP16 with the same computation in FP32.
+- **Measured**: the shared expert's gated product, `silu(gate) * up`, which feeds its `down_proj`, stays at or below 105.1 through layer 74. It passes FP16's limit of 65,504 at layer 75 and reaches 1.51 million at layer 76, on ordinary tokens, not only the first. In FP16, layer 75 overflowed on 9 of 32 rows and layer 76 on 29 of 32, leaving non-finite values in the stream that leaves the layer. In FP32, all 32 rows stayed finite through layer 77, with peaks of 76,661.9 at layer 75 and 1,510,548.9 at layer 76, and the per-layer peaks at layers 57 to 74 matched the FP16 run within 0.05 relative.
+- **Downstream**: the output head copes with these values. On 4 rows of layer-77 states (6,725 positions, 156 of them above 65,504), the head as served (BF16 hyper-connection head, RMSNorm, FP32 projection) matched an all-FP32 head on 6,719 top-1 tokens (99.91%) and on all 156 large positions, with a largest logit error of 0.0549. TensorFold's own kernels, replayed on 157 sampled positions from layers 75 to 77 against FP32, stayed finite in both full-width and four-way split mode; 19 positions missed the agreement bands in both modes, at near-tied router picks or inside the layer-77 shared expert before the routed experts are added.
+- **What this means for a quantizer**: carry the streams and calibration state in BF16 or FP32, compute the shared expert's product in FP32, and keep the two `shared_experts.down_proj` matrices at layers 75 and 76 lossless. The trunk recipes do this (`overrides` in `quant/recipe-trunk-4b.yaml` and `-6b.yaml`); each matrix costs 4.50 MiB more per Spark than at 4 bits.
+- **For an engine**: keep that product, the `down_proj` input and the residual stream out of FP16 for layers 75 to 77.
+- **Not measured**: the other 218 calibration rows, those kernels with the real layer 75 to 77 routed weights (a layer-36 stand-in was used), and the quality of a 4-bit or 6-bit `down_proj` at layers 75 and 76.
+
+## 6. With thinking on, a long coding reply can end before the answer starts
+
+- **Setup**: four Sparks serving the full quant (`4b6b`, drafts on, repeat option on, 131,072-token window), one request at a time, 2026-11-21. The task is RigMark's first code prompt: a Go token-bucket rate limiter with table-driven tests, one code block for each, under 1,100 words. Thinking on (`reasoning_effort` high), 8,192-token cap, seed 20260905.
+- **Measured**: in RigMark's quick run with thinking on, all five code replies ran to the 8,192-token cap. One reply's request was then sent again five ways, one saved stream each. The last three rows are a second boot with the server's budget set (`SERVE_THINKING_BUDGET="4096"`, the kit's launcher); those requests sent no `thinking_budget`:
+
+  | Decoding | Cap | Finish | Reasoning tokens | Answer tokens | tok/s | Loop |
+  | --- | ---: | --- | ---: | ---: | ---: | --- |
+  | Greedy, drafts on (RigMark's request) | 8,192 | `length` | 8,192 | 0 | 32.72 | Yes: one 244-character passage repeated from character 17,267 to the cap |
+  | Tencent's sampling (`temperature` 0.9, `top_p` 1), seed 20260905 | 8,192 | `length` | 8,192 | 0 | 13.27 | No |
+  | The same, seed 20260906 | 8,192 | `length` | 8,192 | 0 | 12.96 | No |
+  | Greedy, drafts off (`"draft": false`) | 5,500 | `length` | 5,500 | 0 | 15.34 | No exact loop; the same phrasing again and again |
+  | Greedy, drafts on, `"thinking_budget": 4096` | 8,192 | `stop` | 4,097 | 1,985 | 28.42 | No |
+  | Greedy, drafts on, server budget 4096 | 8,192 | `stop` | 4,097 | 1,985 | 28.42 | No |
+  | Tencent's sampling, seed 20260905, server budget 4096 | 8,192 | `length` | 4,097 | 4,095 | 13.75 | No; the answer went on reasoning |
+  | Greedy, thinking off (`no_think`), server budget 4096 | 8,192 | `stop` | 0 | 2,409 | 38.97 | No |
+
+- **Why greedy**: RigMark sends `temperature` 0, and the server decodes greedily at 0. It samples with Tencent's `generation_config.json` (`temperature` 0.9, `top_p` 1) only when a request sends no `temperature`. A drafted token is kept only when the full model picks the same token, so the loop is the full quant's own greedy path, not the drafter's. Sampling ended the loop, but the reasoning still filled the cap.
+- **The server's budget**: `--thinking-budget 4096` was on all four ranks. The greedy request gave the same 6,082 tokens as the one that sent `"thinking_budget": 4096`: the same server token hash (`8150d3269a82`) and the same answer file. The thinking-off request was left alone. With Tencent's sampling the server closed the reasoning at 4,097 tokens, but the reply then went on reasoning in the visible answer, wrote 9 code blocks and ran to the cap.
+- **What gave the answer**: on this task the build gave the two Go blocks it asked for (`limiter.go`, `limiter_test.go`, ending on `stop`) at `temperature` 0, with thinking off, or with thinking on and a 4,096-token budget, per request or on the server. It did not at `temperature` 0.9, with the budget or without it; with the budget that is one request and one seed. Thinking off also passed in RigMark's quick run, greedy: the code task passed 5 of 5 completion gates in 2,323 to 2,940 tokens, at a median 38.2 tok/s.
+- **What to send**, as measured: `temperature` 0 with `"thinking_budget"` (4096 here, well under `max_tokens`) or with `reasoning_effort` `no_think`. A request that sends no `temperature` is sampled at 0.9, where the budget did not give the answer. What holds at other temperatures and on other tasks is not measured yet. The launcher's default budget (`SERVE_THINKING_BUDGET`, [launch/SETTINGS.md](launch/SETTINGS.md#serve_thinking_budget)) is off by default, so the default launch is the one measured.
+- **Not known**: whether the original model at full precision also spends 8,192 tokens thinking on this task. Nothing here can run it for a reply this long. This is one task on one build, not a verdict on the model or the quant. Summaries, answers and the server's lines are in `receipts/thinking/`.
+
+## 7. A two-digit number in a picture, read with drafts on and off
+
+- **Setup**: four Sparks serving the release build through the kit's launcher, vision on, both image decoders staged, drafts on (the default), 2026-11-22. One picture, a 10,913-byte JPEG: a white 74 drawn in blocky strokes on a dark plaque, the left half red and the right half blue (sha256 `666ec7b3`). The question: "What two-digit number is written in the center, and what colors are the left half and right half? Reply in one short sentence." `temperature` 0, thinking off.
+- **Measured**: two requests on the same boot with the same picture and question, each 325 prompt tokens and 21 reply tokens:
+
+  | Request | Drafts | Reply | Rank 0's log |
+  | --- | --- | --- | --- |
+  | `bench/vision_check.py`, 22:12 UTC | on | "The number 14 is in the center, with a red left half and a blue right half." | 6 rounds, 16 of 22 drafts kept, 33.6 tok/s |
+  | Our engine's codec check, `"draft": false` | off | "The number 74 is in the center, with a red left half and a blue right half." | 20 rounds, no drafts, 16.8 tok/s |
+
+- **Drafts, not the decoder**: on the next boot (23:13 UTC, `digit_probe.py`), the same question with the same settings went four ways. The JPEG and a PNG of its decoded pixels each read 14 with drafts on and 74 with `"draft": false`, at 325 prompt tokens and 21 reply tokens every time. So the format is not the cause; drafting is. With drafts on, each token is checked in a wider batch, where BF16 rounds differently, so a close call can go the other way.
+- **Log probabilities**: the same four requests with `logprobs` got HTTP 400, "logprobs are not supported by this model or backend". So how close the model's top two picks were at that digit is not measured.
+- **What to send**: for exact reads of small text or digits in a picture, send `"draft": false` with the request ([launch/SETTINGS.md](launch/SETTINGS.md#serve_drafts)). On this reply, decoding without drafts was half as fast.
+- **The kit's check**: its JPEG and WebP probes no longer use this picture. They ask about the text card and the bar chart, judged by the same strict rules as the PNGs. The picture, its PNG, every reply, both scripts and rank 0's two log lines from the first boot are in `receipts/next/release/digit/`.
+
+## Open items
+
+Nine things this release leaves open, with what was measured about each.
+
+- **The full quant has been served from per-Spark weight files only at a 4,096-token window.** The release engine can export and load per-Spark files that carry the packed trunk (`--trunk` in `zig/src/families/hy4/pack_export.zig`, and the test "per-rank pack with packed trunk" in `zig/src/families/hy4/pack_test.zig`, both in the patched engine tree). The full quant's 78-layer split has run and checked clean. On 2026-11-22 a four-Spark launch from it at 4,096 tokens, with the 4-bit drafter, gave the full pack's tokens on every prompt compared (416 plain, 384 drafted). Against the full-pack boot with the same settings, each Spark loaded in 27.5 to 43.1 s instead of 47.4 to 76.3 s, and the lowest `MemAvailable` was 37.23 GiB instead of 32.49 ([README.md](README.md#per-spark-weight-files), "Launching from parts, as measured"). No launch from parts has run at 131,072 tokens, so the serving boots behind this release's numbers load the full pack. On one idle Spark (2026-11-21, 09:01 to 09:05 UTC, rank 0 of a lossless-trunk test pack, not the 78-layer full quant, three loads each), loading from `common/` plus `rank0/` instead of the full pack left 4.3 GiB more memory available at the load peak (lowest `MemAvailable` 113.2 to 113.3 GiB against 108.8 to 109.0 GiB) and was 14.2% faster (median 27.3 s against 31.8 s).
+- **The draft cutoff's count is not in the server's reply.** The engine counts the proposals the cutoff drops (`cut_tokens`, `zig/src/families/hy4/cuda_backend.zig` line 530) and `tf-hy4-oracle` prints it, but the server's `speculative` JSON carries `rounds`, `calls`, `offered`, `drafted`, `accepted`, `acceptance_rate` and `tokens_per_round` and no cut count (`zig/src/server/chat_generation.zig` lines 392 to 398). So the cutoff's effect is read from tok/s and the offered and accepted counts: at 0.85, on prose with thinking on, offered fell from 174 to 104 and accepted from 90 to 78 (2026-11-21, the 0.85 cutoff run in [card/QUALITY_CARD.md](card/QUALITY_CARD.md#draft-cutoff)).
+- **Telling `4b` from `4b6b` apart needs a larger score.** On the 192 positions of the four-build table, `4b` against the lossless trunk was 6 positions only the lossless trunk got right against 3 only `4b` got right, and `4b6b` was 1 against 5. Counts this small do not prove a difference between `4b` and `4b6b`, and this release made no larger score of `4b` ([card/QUALITY_CARD.md](card/QUALITY_CARD.md#why-4b6b-the-four-build-table), "Why `4b6b`").
+- **One Spark lost power three times under four-Spark load.** The same Spark, once on 2026-11-20 and twice on 2026-11-21, each time during four-Spark work. Each time it was a sudden loss of power on that one Spark, not memory and not the engine:
+  - Both of its cable ports lost carrier in the same instant, as seen from both neighbours (3 ms apart the third time).
+  - Its own log stops in the middle of normal work, with no warning line.
+  - After the first two, no kernel crash was saved at the next boot. After the third, it was started again on 2026-11-22, once its power cord had been swapped with another Spark's.
+
+  The first cut came during short four-Spark checks with a quantization job beside them; its power draw was not recorded. The second came 14 min 45 s into the prefill of the 128K needle with thinking off, after 33.5 minutes of back-to-back 128K prefill, with 25.98 GiB free and steady. The same 128K request, rerun on a second boot that day, passed ([card/QUALITY_CARD.md](card/QUALITY_CARD.md#32k-and-128k)).
+
+  The third came at 22:25:55 UTC, 88 minutes into the full RigMark run, after 75.9 minutes of back-to-back prefill, during its 64K requests. That run's numbers are marked as cut short ([README.md](README.md#rigmark)). Half a second before the cut, the Spark read normal: hottest sensor 88.5 C, GPU 81 C at 77.5 W, no throttle, 26.2 GiB free. Over its last 10 minutes it was never the hottest or the hungriest of the four.
+
+  What sets the cuts apart so far is long prefill at full power: the two timed cuts came 33.5 and 75.9 minutes into it, at about 75 W on that Spark's GPU. Shorter or lighter work did not cut it, and none of the decode runs did. On 2026-11-21 the longest full-power stretch it came through was 18.6 minutes. The other three Sparks took the same load, one 5 C hotter and one at 5 W more, and stayed up.
+
+  What is not known: whether the fault is that Spark's power adapter or the unit itself. Its own sensors gave no warning. Three events are few, and they cannot rule out chance.
+
+  After the swap, this release's runs were made on 2026-11-22 with every Spark's graphics clock capped at 2,200 MHz, and none was cut. Window 1 ran 49.9 minutes from start to stop, with the 128K needle twice (343.59 and 343.46 s to first token). Window 2 ran 48.5 minutes over three boots (`receipts/next/release/windows/`). That says what ran without a cut. It does not show that the swap or the cap is the cure.
+
+  If a Spark of yours goes dark during a long prefill, read the kernel log on a cabled neighbour, which needs no sudo: `journalctl -k --utc -o short-iso-precise | grep mlx5`. A hung Spark keeps its links up. One without power drops both of its ports at once. Here, after the first two cuts, the Spark stayed off until its power cord was unplugged and plugged back in.
+- **A Spark that dies during a long prefill hangs the request.** On the earlier build's prefill path (`TF_HY4_FAST_PREFILL=0` in this release), if one Spark dies during a long prefill, the request hangs with no error, and `/health` keeps answering 200. The prefill gathers have no deadline:
+  - `TF_HY4_TP_TIMEOUT_S` covers startup and the full-logit head gather only.
+  - The relay's own timeout covers only decode-size gathers.
+
+  This release's fast prefill path (the default) sums prompt rows with a ring all-reduce instead. A Spark dying during it was not re-measured.
+
+  The plan frames have no deadline either, for text and images alike. Rank 0 sends each step's plan, and an image request's features (at most 512 MiB), to the other Sparks with no deadline and no acknowledgement; they wait with no deadline. If one Spark's serve process stalls while its network stays up, text and image requests hang alike. Read from the release build's code; not measured.
+
+  `launch/launch.sh` still ends the serve when its ssh session to the dead Spark gives up. On 2026-11-21 that took 15 min 20 s. Two things help without changing the kit:
+  - A client timeout above your longest prefill.
+  - ssh keepalive for your Spark hosts in `~/.ssh/config` (`ServerAliveInterval` and `ServerAliveCountMax`), which is OpenSSH's documented way to notice a dead peer sooner.
+
+  We did not measure the keepalive path ([launch/SETTINGS.md](launch/SETTINGS.md#tf_hy4_tp_timeout_s)).
+- **Rank 0 encodes a request's images before it can be cancelled.** It encodes them one after another, and the first cancel check comes after the last one, so a cancelled request still holds rank 0 until its images are encoded. Read from the release build's code. On the release build, two images filling the 8,192-token cap took 70.5 s to the first token, encode and prefill together (`receipts/next/release/engine-checks/gate_b_summary.json`).
+- **The KL panel tool is not in this kit.** The README's KL panel was scored with a panel tool on engine branch `hy4-kl-panel` (`b51568b41`, one commit off the release commit). Neither that tool nor the reference logits are in this kit, and the tool's picks were not cross-checked against the served build's. Shipping the tool, with that cross-check, is open (`receipts/quant/kl-panel/`).
+- **No prefix reuse between requests.** Every request is read from its first token; nothing is kept from an earlier request. At engine commit `ef8ebb7c`, `opening` in `zig/src/families/hy4/cuda_backend.zig` (line 359) starts each request with nothing kept: it sets the request's fill point and cached count to 0 and, if the server hands it a saved prefix, marks the reuse as failed (`reuse_failed`). An agent sends the same prefix plus a little more on every turn, so it waits for its whole context every turn. In two turns of one conversation on the release build, thinking off, 20,414 prompt tokens waited 46.28 s for the first streamed piece and the next turn, 20,455 tokens, 46.35 s, with 0 cached tokens on both ([README.md](README.md#what-is-new-against-the-earlier-build), `receipts/next/release/agent-loop/`). Reusing a prefix between requests is open.
+- **A failed image request can leave the other three Sparks with the earlier image.** On a serve where an image request has already succeeded, if a later image request fails while it is being prepared, rank 0 forgets the earlier image, but the other three Sparks keep its positions and never get the clear. The next text request then either stops the serve (the other three reject a chunk of its prompt and rank 0 is left waiting on them) or, for a prompt no longer than the earlier image prompt, returns wrong tokens. This lasts until an image request succeeds or the serve is restarted.
+  - **What it needs**: the host running out of memory, or a CUDA allocation failing, while the image is prepared. A bad, oversized or unsupported image cannot cause it: those are refused before this point.
+  - **How it was found**: by reading the code at engine commit `ef8ebb7c`; not reproduced. In `zig/src/families/hy4/vision_runtime.zig`, `prepareSlotRank0` resets rank 0's image slot (line 415) before the position plan (line 417), the encode (line 423) and the send to the other three (`stageAndFanOutSlot`, line 425). A failure in between leaves only rank 0 cleared, and `clearSlot` sends the clear to the other three only while rank 0's slot is active (line 402).
+  - **What to do**: if an image request fails with a memory error, restart the serve.
+
+  Fixing it is open.

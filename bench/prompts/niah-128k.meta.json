@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "prompt_file": "niah-128k.txt",
+  "code": "HY4-NIAH-62UP-J4G5",
+  "seed": 20261120,
+  "needle_section": 691,
+  "total_sections": 1382,
+  "requested_depth": 0.5,
+  "actual_token_depth": 0.4969,
+  "needle_token_offset": 63597,
+  "context_window": 131072,
+  "target_tokens": 128000,
+  "raw_prompt_tokens": 127979,
+  "rendered_tokens_thinking_on": 128000,
+  "rendered_tokens_no_think": 128003,
+  "chat_template_overhead_thinking_on": 21,
+  "chat_template_overhead_no_think": 24,
+  "recommended_max_tokens_thinking_on": 2048,
+  "recommended_max_tokens_no_think": 256,
+  "headroom_thinking_on": 1024,
+  "headroom_no_think": 2813,
+  "default_thinking_mode": "on (reasoning_effort omitted)"
+}

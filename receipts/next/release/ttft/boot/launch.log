@@ -1,0 +1,21 @@
+=== Preflight rank 0 (node1) ===
+  OK rdma=rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1 f0=192.168.102.1/24 f1=192.168.101.1/24 subnets=[enp1s0f0np0=192.168.102.1/24 enp1s0f1np1=192.168.101.1/24] memlock=15950092 avail=117.4GiB model=ok
+=== Preflight rank 1 (node2) ===
+  OK rdma=rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1 f0=192.168.101.10/24 f1=192.168.100.10/24 subnets=[enp1s0f0np0=192.168.101.10/24 enp1s0f1np1=192.168.100.10/24] memlock=15950092 avail=117.5GiB model=ok
+=== Preflight rank 2 (node4) ===
+  OK rdma=rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1 f0=192.168.100.12/24 f1=192.168.103.12/24 subnets=[enp1s0f0np0=192.168.100.12/24 enp1s0f1np1=192.168.103.12/24] memlock=unlimited avail=117.1GiB model=ok
+=== Preflight rank 3 (node3) ===
+  OK rdma=rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1 f0=192.168.103.11/24 f1=192.168.102.11/24 subnets=[enp1s0f0np0=192.168.103.11/24 enp1s0f1np1=192.168.102.11/24] memlock=15950092 avail=117.5GiB model=ok
+Checking the vision folder ~/hy4/int/vit-bf16 on rank 0 (node1) against launch/vision.sha256...
+  OK: 3 vision files match launch/vision.sha256
+Preflight: PASS (4 nodes ready, RDMA devices and subnets verified, mem >= 95 GiB)
+=== MemAvailable summary vs 78-layer arithmetic thresholds (warning only; unverified until first boot) ===
+  OK   rank 0 (node1): MemAvailable=117.4 GiB (>= 97 GiB for 78L 4,096 boot; >= 111 GiB for 78L 128K boot)
+  OK   rank 1 (node2): MemAvailable=117.5 GiB (>= 97 GiB for 78L 4,096 boot; >= 111 GiB for 78L 128K boot)
+  OK   rank 2 (node4): MemAvailable=117.1 GiB (>= 97 GiB for 78L 4,096 boot; >= 111 GiB for 78L 128K boot)
+  OK   rank 3 (node3): MemAvailable=117.5 GiB (>= 97 GiB for 78L 4,096 boot; >= 111 GiB for 78L 128K boot)
+rank 0 (node1): tensorfold-native sha256 8f0594c2d2c39a48ad6557822fc2a7f2b2d1c7893341b3e3ee3054d2d0c630d9, graphics clock 208 MHz
+rank 1 (node2): tensorfold-native sha256 8f0594c2d2c39a48ad6557822fc2a7f2b2d1c7893341b3e3ee3054d2d0c630d9, graphics clock 305 MHz
+rank 2 (node4): tensorfold-native sha256 8f0594c2d2c39a48ad6557822fc2a7f2b2d1c7893341b3e3ee3054d2d0c630d9, graphics clock 305 MHz
+rank 3 (node3): tensorfold-native sha256 8f0594c2d2c39a48ad6557822fc2a7f2b2d1c7893341b3e3ee3054d2d0c630d9, graphics clock 208 MHz
+Server ready on node1:18080 in 81s; serving indefinitely (send INT/TERM to stop). Logs in /tmp/hy4-release-ttft

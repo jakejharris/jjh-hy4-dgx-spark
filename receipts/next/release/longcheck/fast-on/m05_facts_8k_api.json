@@ -1,0 +1,62 @@
+{
+  "id": "m05_facts_8k_api",
+  "group": "main",
+  "kind": "facts",
+  "tag": "fast-on",
+  "utc": "2026-11-22T22:23:49Z",
+  "model": "frozen-78l-dfly",
+  "max_tokens": 32,
+  "expected_rendered_tokens": 8194,
+  "prompt_tokens": 8194,
+  "completion_tokens": 25,
+  "finish_reason": "stop",
+  "wall_s": 19.787,
+  "content": "CLUSTER_CODE=NORTH-14 | QUOTA_CAP=64800 | SIGNER_ID=SIG-883K",
+  "text_sha256": "805dcf218366e8fb96a280f04e6efe9f2479a164c59da31b67664147a93995a8",
+  "token_ids": [
+    6396,
+    89414,
+    46535,
+    47880,
+    1958,
+    7001,
+    12,
+    1023,
+    368,
+    39405,
+    60463,
+    84639,
+    28,
+    37479,
+    467,
+    368,
+    55133,
+    1331,
+    14099,
+    63211,
+    3065,
+    12,
+    43079,
+    42,
+    120025
+  ],
+  "token_sha256": "ca465308a841bee7d2e296e87231a0a6a3dbffb469252a7932736cbbe905e859",
+  "facts": [
+    {
+      "key": "CLUSTER_CODE",
+      "expected": "NORTH-14",
+      "right": true
+    },
+    {
+      "key": "QUOTA_CAP",
+      "expected": "64800",
+      "right": true
+    },
+    {
+      "key": "SIGNER_ID",
+      "expected": "SIG-883K",
+      "right": true
+    }
+  ],
+  "loop_or_broken": null
+}

@@ -1,0 +1,22 @@
+{
+  "tag": "vis_on",
+  "model_id": "frozen-78l-dfly",
+  "cases": {
+    "text_greedy_nothink": {
+      "combined_sha256": "be7c52b9c165519df5031c543cb3799a367e439eaad60be6e4bb64ffd8cbd5f5",
+      "prompt_tokens": 45,
+      "completion_tokens": 25,
+      "decode_tok_s": 45.87,
+      "finish_reason": "stop",
+      "content": "2, 3, 5, 7, 11, 13, 17, 19\n77"
+    },
+    "text_seeded_thinkon": {
+      "combined_sha256": "a40f3d4bc8af8dd1ea29aa070c4fa81f3deb23045cffe353db7a91dfb3b0be88",
+      "prompt_tokens": 39,
+      "completion_tokens": 512,
+      "decode_tok_s": 16.39,
+      "finish_reason": "length",
+      "content": ""
+    }
+  }
+}

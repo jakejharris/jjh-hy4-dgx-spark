@@ -1,0 +1,333 @@
+{
+  "P5": {
+    "probe_id": "P5",
+    "http_status": 200,
+    "payload": {
+      "model": "frozen-78l-dfly",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Work carefully and give a complete, technically precise answer. Do not mention benchmarking or the request nonce."
+        },
+        {
+          "role": "user",
+          "content": "Request nonce: 6c57456baad1fa453b79e4d33f62f648\n\nImplement a compact, production-quality Go package for one concurrency-safe token-bucket rate limiter. Include an injectable clock, AllowN, constructor validation, and table-driven tests using a fake clock. Return only one implementation code block and one test code block, each with its filename, and no prose. Keep the complete answer below 1,100 words."
+        }
+      ],
+      "reasoning_effort": "high",
+      "max_tokens": 8192,
+      "stream": true,
+      "stream_options": {
+        "include_usage": true
+      },
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "seed": 20260905,
+      "return_token_ids": true
+    },
+    "finish_reason": "stop",
+    "stream_done_marker": true,
+    "usage": {
+      "prompt_tokens": 137,
+      "completion_tokens": 6082,
+      "total_tokens": 6219,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 4097
+      }
+    },
+    "completion_tokens": 6082,
+    "reasoning_tokens": 4097,
+    "answer_tokens": 1985,
+    "reasoning_chars": 16333,
+    "content_chars": 5816,
+    "total_chars": 22149,
+    "measured_sse_events": 1946,
+    "ttft_s": 1.4991,
+    "first_visible_s": 164.7618,
+    "decode_s": 214.0003,
+    "wall_s": 215.6173,
+    "decode_tps": 28.42,
+    "longest_repeated_block": {
+      "length_chars": 135,
+      "first_pos": 19655,
+      "second_pos": 20534,
+      "period_chars": 879,
+      "snippet_preview": "\",\n\t\t\trate:  time.Second,\n\t\t\tburst: 2,\n\t\t\tsteps: []struct {\n\t\t\t\tadvance time.Duration\n\t\t\t\tn       int64\n\t\t\t\twant    bool\n\t\t\t}{\n\t\t\t\t{0, "
+    },
+    "reasoning_lrs": {
+      "length_chars": 82,
+      "first_pos": 8534,
+      "second_pos": 8641
+    },
+    "content_lrs": {
+      "length_chars": 135,
+      "first_pos": 3322,
+      "second_pos": 4201
+    },
+    "last_2000_chars_earlier_share_min20": {
+      "tail_len": 2000,
+      "earlier_len": 20149,
+      "min_match": 20,
+      "matched_chars": 778,
+      "share": 0.389
+    },
+    "last_2000_chars_earlier_share_min40": {
+      "tail_len": 2000,
+      "earlier_len": 20149,
+      "min_match": 40,
+      "matched_chars": 389,
+      "share": 0.1945
+    },
+    "total_nonempty_lines": 288,
+    "middle_5_lines": [
+      "\t}",
+      "\tfor _, tt := range tests {",
+      "\t\tt.Run(tt.name, func(t *testing.T) {",
+      "\t\t\tif _, err := New(tt.rate, tt.burst, tt.clock); err == nil {",
+      "\t\t\t\tt.Fatal(\"expected error\")"
+    ],
+    "last_5_lines": [
+      "\tif allowed != 100 {",
+      "\t\tt.Fatalf(\"allowed = %d, want 100\", allowed)",
+      "\t}",
+      "}",
+      "```"
+    ],
+    "answer_check": {
+      "fenced_block_count": 2,
+      "go_filenames_mentioned": [
+        "limiter.go",
+        "limiter_test.go"
+      ],
+      "has_impl_filename": true,
+      "has_test_filename": true,
+      "two_blocks_with_filenames": true
+    },
+    "reasoning_sha256": "8380fb89309f6a169cbc8a22f45c78880275d7621011dcb40bfcb6b8a3ebf5ef",
+    "content_sha256": "e0fa38749cc2742254b76f762572a34a1d901ff37d240484db47adc8a0e55856"
+  },
+  "P6": {
+    "probe_id": "P6",
+    "http_status": 200,
+    "payload": {
+      "model": "frozen-78l-dfly",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Work carefully and give a complete, technically precise answer. Do not mention benchmarking or the request nonce."
+        },
+        {
+          "role": "user",
+          "content": "Request nonce: 6c57456baad1fa453b79e4d33f62f648\n\nImplement a compact, production-quality Go package for one concurrency-safe token-bucket rate limiter. Include an injectable clock, AllowN, constructor validation, and table-driven tests using a fake clock. Return only one implementation code block and one test code block, each with its filename, and no prose. Keep the complete answer below 1,100 words."
+        }
+      ],
+      "reasoning_effort": "high",
+      "max_tokens": 8192,
+      "stream": true,
+      "stream_options": {
+        "include_usage": true
+      },
+      "temperature": 0.9,
+      "top_p": 1.0,
+      "top_k": -1,
+      "seed": 20260905,
+      "return_token_ids": true
+    },
+    "finish_reason": "length",
+    "stream_done_marker": true,
+    "usage": {
+      "prompt_tokens": 137,
+      "completion_tokens": 8192,
+      "total_tokens": 8329,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 4097
+      }
+    },
+    "completion_tokens": 8192,
+    "reasoning_tokens": 4097,
+    "answer_tokens": 4095,
+    "reasoning_chars": 16939,
+    "content_chars": 16237,
+    "total_chars": 33176,
+    "measured_sse_events": 5177,
+    "ttft_s": 0.8744,
+    "first_visible_s": 288.9394,
+    "decode_s": 595.5297,
+    "wall_s": 596.4119,
+    "decode_tps": 13.75,
+    "longest_repeated_block": {
+      "length_chars": 283,
+      "first_pos": 19140,
+      "second_pos": 30382,
+      "period_chars": 11242,
+      "snippet_preview": "\nfunc isNilClock(c Clock) bool {\n    if c == nil { return true }\n    v := reflect.ValueOf(c)\n    switch v.Kind() {\n    case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:\n        return v.IsNil()\n   "
+    },
+    "reasoning_lrs": {
+      "length_chars": 88,
+      "first_pos": 219,
+      "second_pos": 634
+    },
+    "content_lrs": {
+      "length_chars": 283,
+      "first_pos": 2201,
+      "second_pos": 13443
+    },
+    "last_2000_chars_earlier_share_min20": {
+      "tail_len": 2000,
+      "earlier_len": 31176,
+      "min_match": 20,
+      "matched_chars": 241,
+      "share": 0.1205
+    },
+    "last_2000_chars_earlier_share_min40": {
+      "tail_len": 2000,
+      "earlier_len": 31176,
+      "min_match": 40,
+      "matched_chars": 67,
+      "share": 0.0335
+    },
+    "total_nonempty_lines": 359,
+    "middle_5_lines": [
+      "```",
+      "package ratelimit",
+      "// Clock supplies the current time. Implementations must be safe for concurrent use.",
+      "type Clock interface { Now() time.Time }",
+      "// SystemClock is a Clock backed by time.Now."
+    ],
+    "last_5_lines": [
+      "```",
+      "Need initial tokens from burst; no mutation below. no.",
+      "Need issue with `advance`: l.last = now before capping. If added NaN -> set tokens burst. Fine. If clock goes backwards, no update. If clock jumps forward huge with rate huge -> added Inf, cap. Good.",
+      "Need issue: if `n > l.burst`, we return false before calling clock.Now/advance. Is that concurrency safe? l.burst immutable. Good. But state's `last` remains old; future calls with n <= burst will credit full elapsed since last. This is correct time passage. Need if n > burst and clock.Now would be expensive; skip. Need if clock goes backwards during rejected calls, later last could be future and ignore negative. Okay. Need if now is called under lock; if n>burst skip clock, no need. Need if concurrent calls: one with n>burst returns false no state; one normal gets lock. Fine.",
+      "Need issue: `AllowN` n<=0 false without lock. state no access. Fine. Need docs? Need comment. Need tests include. Need maybe user expects n=0 true (like Go x/time/rate). Should we choose false. Need \"AllowN\" is general; no explicit. Need table tests can set false. Is false okay? Need maybe production-quality? Let's think. In rate limiting, a request for zero tokens shouldn't be allowed? There's philosophical. x/time/rate docs: `AllowN` reports whether n events may happen at time now. \"If n <= 0, AllowN returns true\" maybe? Let's verify x/time/rate: In `reserveN`, `lim.mu.Lock()`, if lim.limit == Inf return okay; else `now, last, tokens := lim.advance(now)`, then `tokens -= float64(n)`; if tokens <0, not okay. Anyway for `AllowN`: `return lim.reserveN(now, n, 0).ok`. In reserveN: `if lim.limit == Inf { return ... ok = true }`, `lim.advance(now)`, `tokens -= float64(n)`,"
+    ],
+    "answer_check": {
+      "fenced_block_count": 9,
+      "go_filenames_mentioned": [
+        "limiter.go",
+        "limiter_test.go"
+      ],
+      "has_impl_filename": true,
+      "has_test_filename": true,
+      "two_blocks_with_filenames": false
+    },
+    "reasoning_sha256": "9b55db0cd87937cbb63132f87cf727bf3a98e3d62a0451537c6fe32ee6e9b659",
+    "content_sha256": "ab9a93cc7a6e4ddc4ce350d72e9c919ca0b74a4fb4470cfb64350dd0718585ac"
+  },
+  "P7": {
+    "probe_id": "P7",
+    "http_status": 200,
+    "payload": {
+      "model": "frozen-78l-dfly",
+      "messages": [
+        {
+          "role": "system",
+          "content": "Work carefully and give a complete, technically precise answer. Do not mention benchmarking or the request nonce."
+        },
+        {
+          "role": "user",
+          "content": "Request nonce: 6c57456baad1fa453b79e4d33f62f648\n\nImplement a compact, production-quality Go package for one concurrency-safe token-bucket rate limiter. Include an injectable clock, AllowN, constructor validation, and table-driven tests using a fake clock. Return only one implementation code block and one test code block, each with its filename, and no prose. Keep the complete answer below 1,100 words."
+        }
+      ],
+      "reasoning_effort": "no_think",
+      "max_tokens": 8192,
+      "stream": true,
+      "stream_options": {
+        "include_usage": true
+      },
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "seed": 20260905,
+      "return_token_ids": true
+    },
+    "finish_reason": "stop",
+    "stream_done_marker": true,
+    "usage": {
+      "prompt_tokens": 140,
+      "completion_tokens": 2409,
+      "total_tokens": 2549,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0
+      }
+    },
+    "completion_tokens": 2409,
+    "reasoning_tokens": 0,
+    "answer_tokens": 2409,
+    "reasoning_chars": 0,
+    "content_chars": 6931,
+    "total_chars": 6931,
+    "measured_sse_events": 503,
+    "ttft_s": 0.8342,
+    "first_visible_s": 0.8342,
+    "decode_s": 61.7904,
+    "wall_s": 62.6253,
+    "decode_tps": 38.97,
+    "longest_repeated_block": {
+      "length_chars": 193,
+      "first_pos": 1623,
+      "second_pos": 2019,
+      "period_chars": 396,
+      "snippet_preview": "\n\tl.mu.Lock()\n\tdefer l.mu.Unlock()\n\n\tnow := l.clock.Now()\n\tif now.After(l.last) {\n\t\telapsed := now.Sub(l.last).Seconds()\n\t\tl.tokens = min(l.capacity, l.tokens+elapsed*l.rate)\n\t\tl.last = now\n\t}\n"
+    },
+    "reasoning_lrs": {
+      "length_chars": 0,
+      "first_pos": 0,
+      "second_pos": 0
+    },
+    "content_lrs": {
+      "length_chars": 193,
+      "first_pos": 1623,
+      "second_pos": 2019
+    },
+    "last_2000_chars_earlier_share_min20": {
+      "tail_len": 2000,
+      "earlier_len": 4931,
+      "min_match": 20,
+      "matched_chars": 739,
+      "share": 0.3695
+    },
+    "last_2000_chars_earlier_share_min40": {
+      "tail_len": 2000,
+      "earlier_len": 4931,
+      "min_match": 40,
+      "matched_chars": 405,
+      "share": 0.2025
+    },
+    "total_nonempty_lines": 299,
+    "middle_5_lines": [
+      "\t\t\t\t}",
+      "\t\t\t\tif l != nil {",
+      "\t\t\t\t\tt.Fatalf(\"expected nil limiter on error\")",
+      "\t\t\t\t}",
+      "\t\t\t\treturn"
+    ],
+    "last_5_lines": [
+      "\tif got := l.Tokens(); math.Abs(got) > 1e-9 {",
+      "\t\tt.Fatalf(\"tokens = %v, want 0\", got)",
+      "\t}",
+      "}",
+      "```"
+    ],
+    "answer_check": {
+      "fenced_block_count": 2,
+      "go_filenames_mentioned": [
+        "limiter.go",
+        "limiter_test.go"
+      ],
+      "has_impl_filename": true,
+      "has_test_filename": true,
+      "two_blocks_with_filenames": true
+    },
+    "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "content_sha256": "979c1629caeab1acc230018f14b0c72705f174051c54a65f987c812d27e0ad1f"
+  }
+}

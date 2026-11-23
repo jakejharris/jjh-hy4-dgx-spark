@@ -1,0 +1,133 @@
+{
+  "model_id": "frozen-78l-dfly",
+  "tasks": [
+    {
+      "id": "known1_text_card",
+      "images": [
+        "gate2b_text_card.png"
+      ],
+      "question": "Read the exact code, port number, and status shown in this image.",
+      "prompt_tokens": 444,
+      "completion_tokens": 573,
+      "ttft_s": 2.6102,
+      "prefill_tok_s": 170.1,
+      "decode_tok_s": 24.99,
+      "wall_s": 25.5033,
+      "finish_reason": "stop",
+      "keyword_hits": {
+        "KESTREL-4729": true,
+        "18080": true,
+        "READY": true
+      },
+      "known_answer_pass": true,
+      "usage": {
+        "prompt_tokens": 444,
+        "completion_tokens": 573,
+        "total_tokens": 1017,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 547
+        }
+      },
+      "timings": {}
+    },
+    {
+      "id": "known2_color_grid",
+      "images": [
+        "gate2b_color_grid.png"
+      ],
+      "question": "This image is a 2x2 grid of solid colored squares. Name the color in each of the four positions: top-left, top-right, bottom-left, and bottom-right.",
+      "prompt_tokens": 332,
+      "completion_tokens": 180,
+      "ttft_s": 1.9293,
+      "prefill_tok_s": 172.08,
+      "decode_tok_s": 29.6,
+      "wall_s": 7.9765,
+      "finish_reason": "stop",
+      "keyword_hits": {
+        "red": true,
+        "blue": true,
+        "green": true,
+        "yellow": true
+      },
+      "known_answer_pass": true,
+      "usage": {
+        "prompt_tokens": 332,
+        "completion_tokens": 180,
+        "total_tokens": 512,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 151
+        }
+      },
+      "timings": {}
+    },
+    {
+      "id": "known3_bar_chart",
+      "images": [
+        "gate2b_bar_chart.png"
+      ],
+      "question": "Look at the bar chart. Which day has the highest bar, which day has the lowest bar, and what are the four values from Monday to Thursday?",
+      "prompt_tokens": 576,
+      "completion_tokens": 143,
+      "ttft_s": 3.3327,
+      "prefill_tok_s": 172.83,
+      "decode_tok_s": 32.18,
+      "wall_s": 7.7448,
+      "finish_reason": "stop",
+      "keyword_hits": {
+        "20": true,
+        "75": true,
+        "40": true,
+        "90": true
+      },
+      "known_answer_pass": true,
+      "usage": {
+        "prompt_tokens": 576,
+        "completion_tokens": 143,
+        "total_tokens": 719,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 103
+        }
+      },
+      "timings": {}
+    },
+    {
+      "id": "v6_look_and_fix",
+      "images": [
+        "desktop-02-day.png",
+        "desktop-03-night.png",
+        "phone-01-load.png"
+      ],
+      "question": "These are screenshots of a web page. Describe what you see in each, then list what looks wrong or broken.",
+      "prompt_tokens": 3951,
+      "completion_tokens": 5011,
+      "ttft_s": 29.7213,
+      "prefill_tok_s": 132.94,
+      "decode_tok_s": 21.15,
+      "wall_s": 266.6227,
+      "finish_reason": "stop",
+      "keyword_hits": {},
+      "known_answer_pass": true,
+      "usage": {
+        "prompt_tokens": 3951,
+        "completion_tokens": 5011,
+        "total_tokens": 8962,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4097
+        }
+      },
+      "timings": {}
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+decode/code: 5 runs
+  1: 38.6 tok/s, TTFT 1.525s, 2577 tokens
+  2: 38.5 tok/s, TTFT 0.839s, 2619 tokens
+  3: 38.4 tok/s, TTFT 0.842s, 2536 tokens
+  4: 38.3 tok/s, TTFT 0.840s, 2519 tokens
+  5: 38.0 tok/s, TTFT 0.844s, 2559 tokens
+decode/prose: 5 runs
+  1: 19.1 tok/s, TTFT 0.807s, 1413 tokens
+  2: 19.4 tok/s, TTFT 0.807s, 1557 tokens
+  3: 21.1 tok/s, TTFT 0.817s, 1242 tokens
+  4: 17.6 tok/s, TTFT 0.783s, 1470 tokens
+  5: 18.5 tok/s, TTFT 0.822s, 1266 tokens
+decode/structured: 5 runs
+  1: 55.5 tok/s, TTFT 0.743s, 422 tokens
+  2: 54.6 tok/s, TTFT 0.740s, 422 tokens
+  3: 55.3 tok/s, TTFT 0.727s, 422 tokens
+  4: 55.5 tok/s, TTFT 0.747s, 422 tokens
+  5: 54.4 tok/s, TTFT 0.732s, 422 tokens
+prefill/8192: 3 cold/immediate-replay pairs
+  1: cold 165.1 tok/s (49.628s), warm 165.1 tok/s (49.604s)
+  2: cold 165.0 tok/s (49.639s), warm 164.9 tok/s (49.667s)
+  3: cold 164.9 tok/s (49.684s), warm 164.8 tok/s (49.707s)
+prefill/32768: 3 cold/immediate-replay pairs
+  1: cold 146.4 tok/s (223.875s), warm 146.3 tok/s (223.959s)
+  2: cold 146.3 tok/s (224.034s), warm 146.5 tok/s (223.707s)
+  3: cold 146.5 tok/s (223.656s), warm 146.6 tok/s (223.585s)
+prefill/65536: 3 cold/immediate-replay pairs
+  1: cold 133.7 tok/s (490.069s), warm 133.8 tok/s (489.874s)
+  2: cold 133.8 tok/s (489.923s), warm 133.8 tok/s (489.914s)
+Traceback (most recent call last):
+  File "~/rigmark13/source/bench.py", line 892, in <module>
+    main()
+  File "~/rigmark13/source/bench.py", line 852, in main
+    result["prefill"] = run_prefill(
+                        ^^^^^^^^^^^^
+  File "~/rigmark13/source/bench.py", line 584, in run_prefill
+    warm = prefill_once(client, model, tokens, salt)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/rigmark13/source/bench.py", line 536, in prefill_once
+    row = client.stream("/v1/completions", payload)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/rigmark13/source/bench.py", line 139, in stream
+    for raw in response:
+  File "/usr/lib/python3.12/http/client.py", line 709, in readline
+    result = self.fp.readline(limit)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socket.py", line 707, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "prompt_file": "niah-4k.txt",
+  "code": "HY4-NIAH-MTYF-XEAM",
+  "seed": 20261121,
+  "needle_section": 16,
+  "total_sections": 32,
+  "requested_depth": 0.5,
+  "actual_token_depth": 0.4867,
+  "needle_token_offset": 1495,
+  "context_window": 4096,
+  "target_tokens": 3072,
+  "raw_prompt_tokens": 3051,
+  "rendered_tokens_thinking_on": 3072,
+  "rendered_tokens_no_think": 3075,
+  "chat_template_overhead_thinking_on": 21,
+  "chat_template_overhead_no_think": 24,
+  "recommended_max_tokens_thinking_on": 768,
+  "recommended_max_tokens_no_think": 256,
+  "headroom_thinking_on": 256,
+  "headroom_no_think": 765,
+  "default_thinking_mode": "on (reasoning_effort omitted)"
+}

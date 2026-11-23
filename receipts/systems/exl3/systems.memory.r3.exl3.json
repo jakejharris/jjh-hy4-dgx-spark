@@ -1,0 +1,16 @@
+{
+  "claim_id": "systems.memory.r3.exl3",
+  "generated_utc": "2026-11-21T15:50:05Z",
+  "label": "78l-4b6b-128k-dfly4b-relay",
+  "isolation": "quiet",
+  "rank": 3,
+  "unit": "GiB",
+  "value": 25.14,
+  "source": "continuous_memfloor",
+  "floor_gib": 8.0,
+  "stopped": 0,
+  "min_utc": "2026-11-21T14:50:09Z",
+  "free_after_reserve_gib": 25.99,
+  "reserve_gib": null,
+  "status": "measured"
+}

@@ -1,0 +1,48 @@
+{
+ "command": "python3 tools/text_size.py ~/hy4/int/frozen-78l-dfly",
+ "machine": "node1, the Spark that holds the full pack (headers read over ssh; no tensor data read)",
+ "tool": "tools/text_size.py",
+ "utc": "2026-11-22T23:09:38Z",
+ "rule": "PACK_DIR is the weights folder: model.safetensors.index.json, the files it names, and trunk-4b/ and trunk-6b/. The script reads each file's 8-byte length and JSON header, never tensor data, so it runs in seconds on the pack.",
+ "text_weights": 769907408797,
+ "text_tensors": 238369,
+ "drafter_tensors_left_out": 82,
+ "vision_tensors_in_pack": 0,
+ "trunk_matrices": {
+  "4b": 619,
+  "6b": 619
+ },
+ "trunk_modules_not_in_base": [],
+ "builds": {
+  "lossless": {
+   "bytes": 331686285940,
+   "gb": 331.69,
+   "gib": 308.91,
+   "bits_per_weight": 3.447
+  },
+  "4b": {
+   "bytes": 298028048928,
+   "gb": 298.03,
+   "gib": 277.56,
+   "bits_per_weight": 3.097
+  },
+  "4b6b": {
+   "bytes": 300067660320,
+   "gb": 300.07,
+   "gib": 279.46,
+   "bits_per_weight": 3.118
+  },
+  "6b": {
+   "bytes": 303650644512,
+   "gb": 303.65,
+   "gib": 282.8,
+   "bits_per_weight": 3.155
+  },
+  "bf16": {
+   "bytes": 1539814817594,
+   "gb": 1539.81,
+   "gib": 1434.06,
+   "bits_per_weight": 16.0
+  }
+ }
+}

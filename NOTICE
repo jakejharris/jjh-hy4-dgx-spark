@@ -1,0 +1,52 @@
+Hy4 Four-Node Release Kit
+
+This repository contains original scripts, documentation, and patch generators
+for quantizing and serving tencent/Hy4 on a four-node GPU ring.
+
+Copyright 2026 JJH Digital
+
+The original scripts, documents and patch series in this repository are licensed
+under the Apache License, Version 2.0 (see LICENSE). The model weights are not:
+they stay under the Tencent Hy License, Version 1.0, Section 10 included
+(item 1 below).
+
+Third-party components and upstream notices:
+
+1. tencent/Hy4 (model weights and configuration, commit c10c0de5)
+   Licensed under the Tencent Hy License, Version 1.0.
+   No upstream NOTICE file is present in the pinned c10c0de5 manifest.
+   Quantized weights are Derivative Works under Section 1 of that license;
+   Section 10 commercial MaaS terms apply to all recipients.
+
+2. TensorFold (serving engine base, main 2cee7d9)
+   Copyright 2026 TensorFold contributors
+   https://github.com/ashhart/TensorFold
+   Licensed under the Apache License, Version 2.0 from 0.6.0.
+   The TensorFold patch in serve/patches/0001-hy4-port.patch incorporates
+   upstream pull request #4004 by ashhart (commits 9ef309f39..07845eb41) and
+   Shantanu Goel (commits 1d93ffccc..1da00aa2f; full PR range
+   9ef309f39..1da00aa2f, landed on upstream main in a3e21b3c5..1ae2cc7bf)
+   under the Apache License, Version 2.0.
+   Pre-0.6.0 code retains its MIT notice in upstream LICENSES/MIT.txt.
+   See upstream THIRD_PARTY_NOTICES.md for bundled dependencies.
+
+3. ExLlamaV3 (quantization tool base, v1.6.7, commit 8c593e4)
+   Copyright (c) 2025 Turboderp
+   https://github.com/turboderp-org/exllamav3
+   Licensed under the MIT License.
+   The ExLlamaV3 patch in quant/patches/0001-hy4-quant.patch incorporates
+   Hy4-flash support from commit 1af65c4 by Moshe Malawach
+   (https://github.com/moshemalawach/exllamav3, branch hy4-flash) under the
+   MIT License.
+
+4. llama.cpp (engine for the GGUF comparison, f8d4cc414 + PR #32517 + stq1_0.patch)
+   Licensed under the MIT License.
+
+5. gr8 (kindlingai/gr8, commit 4964aab)
+   Copyright (c) 2026 gr8 engine contributors
+   Licensed under the MIT License.
+   Designs and code adapted into these files of the TensorFold patch series:
+   zig/kernels/cuda/hy4/trunk.cu, zig/kernels/cuda/hy4/routed.cu,
+   zig/kernels/cuda/hy4/routed_wide.cuh, zig/kernels/cuda/hy4/mla_project.cu and
+   zig/src/families/hy4/draft_policy.zig. The full notice and the gr8 source
+   files are listed in THIRD_PARTY.md.

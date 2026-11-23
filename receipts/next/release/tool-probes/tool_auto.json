@@ -1,0 +1,62 @@
+{
+ "request": {
+  "model": "frozen-78l-dfly",
+  "max_tokens": 1024,
+  "messages": [
+   {
+    "role": "user",
+    "content": "What is the weather in Austin, TX right now? Use the tool."
+   }
+  ],
+  "tools": [
+   {
+    "type": "function",
+    "function": {
+     "name": "get_weather",
+     "description": "Get the current weather for a city.",
+     "parameters": {
+      "type": "object",
+      "properties": {
+       "city": {
+        "type": "string",
+        "description": "City and state"
+       }
+      },
+      "required": [
+       "city"
+      ]
+     }
+    }
+   }
+  ],
+  "tool_choice": "auto"
+ },
+ "result": {
+  "status": 200,
+  "seconds": 4.8,
+  "finish_reason": "tool_calls",
+  "tool_calls": [
+   {
+    "id": "call_50e5abae6c90b1b41c7b77e0",
+    "type": "function",
+    "function": {
+     "name": "get_weather",
+     "arguments": "{\"city\":\"Austin, TX\"}"
+    }
+   }
+  ],
+  "content": "I'll check the current weather for Austin, TX using the weather tool.",
+  "reasoning_chars": 177,
+  "usage": {
+   "prompt_tokens": 207,
+   "completion_tokens": 78,
+   "total_tokens": 285,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 46
+   }
+  }
+ }
+}

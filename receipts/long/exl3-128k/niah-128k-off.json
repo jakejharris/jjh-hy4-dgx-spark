@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "label": "winC-78l-4b6b-128k-dfly4b-relay-rs1-nothink-niah128k",
+  "prompt": "~/work/max/hy4/kit/bench/prompts/niah-128k.txt",
+  "meta": {
+    "schema": 1,
+    "prompt_file": "niah-128k.txt",
+    "code": "HY4-NIAH-62UP-J4G5",
+    "seed": 20261120,
+    "needle_section": 691,
+    "total_sections": 1382,
+    "requested_depth": 0.5,
+    "actual_token_depth": 0.4969,
+    "needle_token_offset": 63597,
+    "context_window": 131072,
+    "target_tokens": 128000,
+    "raw_prompt_tokens": 127979,
+    "rendered_tokens_thinking_on": 128000,
+    "rendered_tokens_no_think": 128003,
+    "chat_template_overhead_thinking_on": 21,
+    "chat_template_overhead_no_think": 24,
+    "recommended_max_tokens_thinking_on": 2048,
+    "recommended_max_tokens_no_think": 256,
+    "headroom_thinking_on": 1024,
+    "headroom_no_think": 2813,
+    "default_thinking_mode": "on (reasoning_effort omitted)"
+  },
+  "model": "frozen-78l-dfly",
+  "reasoning_effort": "no_think",
+  "thinking_mode": "off (no_think)",
+  "max_tokens": 256,
+  "timeout_s": 7200.0,
+  "response": {
+    "http_status": 200,
+    "prompt_n": 128003,
+    "pred_n": 13,
+    "ttft_s": 1114.2837,
+    "total_s": 1114.7043,
+    "pp_tps": 114.87,
+    "tg_tps": 28.74,
+    "finish_reason": "stop",
+    "usage": {
+      "prompt_tokens": 128003,
+      "completion_tokens": 13,
+      "total_tokens": 128016,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0
+      }
+    },
+    "timings": null,
+    "tensorfold": {
+      "enable_thinking": false,
+      "reasoning_effort": "none",
+      "engine": "lanes",
+      "tokens_per_second": 28.737120995241217,
+      "seconds": 0.417578365,
+      "prefill_seconds": 1114.119148483,
+      "prefill_widths": [],
+      "prefill_raised": [],
+      "time_to_first_token": 1114.226637853,
+      "sampling": "greedy",
+      "drafts": true,
+      "token_sha": "98919db06782",
+      "token_sha256": "98919db06782e92b867eeb76e3fe2099fe1b3067f857f1708e8ee3f3da98c134",
+      "min_rows": 5
+    },
+    "speculative": {
+      "rounds": 3,
+      "calls": 3,
+      "offered": 12,
+      "drafted": 12,
+      "accepted": 12,
+      "acceptance_rate": 1.0,
+      "tokens_per_round": 4.333333333333333
+    },
+    "reasoning_content": "",
+    "content": "HY4-NIAH-62UP-J4G5"
+  },
+  "score": {
+    "expected_code": "HY4-NIAH-62UP-J4G5",
+    "answer_raw": "HY4-NIAH-62UP-J4G5",
+    "answer_normalized": "HY4-NIAH-62UP-J4G5",
+    "strict_exact": true,
+    "exact_match": true,
+    "code_in_content": true,
+    "code_in_reasoning": false
+  },
+  "verdict": "PASS"
+}

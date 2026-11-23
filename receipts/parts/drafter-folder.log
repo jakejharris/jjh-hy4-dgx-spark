@@ -1,0 +1,87 @@
+# tools/drafter_folder.sh on real weights, 2026-11-21, three Sparks (the fourth was off after a power cut).
+# The gate seat's own step logs, unchanged except home folders written ~ and the Sparks named node1 to node4.
+# Step 1 staged the kit's tool and manifest from commit 913b06a; step 2 built the folder on node1 from the full
+# pack there; step 3 copied it to node2 and node3 with our own copy tool (not in the kit), one cable each, then ran
+# the in-place check (tools/drafter_folder.sh DIR DIR) on all three.
+## step1_stage_tool.log
+=== STEP 1: STAGE KIT TOOL FROM K main 913b06a ===
+PC kit sha256: tools/drafter_folder.sh=9134bc46ff3382628be826fa247b9745125595292773262cab3884c1fed567f5 launch/weights.sha256=cc3699cb974c933de689e7ef5ef9022e12469f86de3529cf8c8ad0468159296f
+node1: 9134bc46ff3382628be826fa247b9745125595292773262cab3884c1fed567f5  ~/hy4/int/kit-drafter-tool/tools/drafter_folder.sh
+node1: cc3699cb974c933de689e7ef5ef9022e12469f86de3529cf8c8ad0468159296f  ~/hy4/int/kit-drafter-tool/launch/weights.sha256
+node2: 9134bc46ff3382628be826fa247b9745125595292773262cab3884c1fed567f5  ~/hy4/int/kit-drafter-tool/tools/drafter_folder.sh
+node2: cc3699cb974c933de689e7ef5ef9022e12469f86de3529cf8c8ad0468159296f  ~/hy4/int/kit-drafter-tool/launch/weights.sha256
+node3: 9134bc46ff3382628be826fa247b9745125595292773262cab3884c1fed567f5  ~/hy4/int/kit-drafter-tool/tools/drafter_folder.sh
+node3: cc3699cb974c933de689e7ef5ef9022e12469f86de3529cf8c8ad0468159296f  ~/hy4/int/kit-drafter-tool/launch/weights.sha256
+## step2_node1_build.log
+=== STEP 2: BUILD DRAFTER FOLDER ON node1 ===
+BEFORE_UTC=2026-11-21T23:10:47Z
+BEFORE_DF=/dev/nvme0n1p2 4031871553536 2953516724224 873513979904  78% /
+BEFORE_MEM=115.59 GiB
+linked  config.json
+linked  model-00245-of-00245.safetensors
+linked  trunk-4b/dfly_layers.safetensors
+linked  trunk-4b/lm_head.safetensors
+linked  trunk-4b/trunk.index.json
+OK      config.json
+OK      model-00245-of-00245.safetensors
+OK      trunk-4b/dfly_layers.safetensors
+OK      trunk-4b/lm_head.safetensors
+OK      trunk-4b/trunk.index.json
+drafter folder ~/hy4/int/drafter-4b: 5 files, 8566396282 bytes, each equal to launch/weights.sha256; set DRAFTER_DIR="~/hy4/int/drafter-4b"
+BUILD_WALL_S=5.544
+AFTER_UTC=2026-11-21T23:10:52Z
+AFTER_DF=/dev/nvme0n1p2 4031871553536 2953516732416 873513971712  78% /
+AFTER_MEM=115.57 GiB
+--- STAT OUT ---
+~/hy4/int/drafter-4b/config.json size=11537 nlink=2 ino=65798149 dev=66306
+~/hy4/int/drafter-4b/model-00245-of-00245.safetensors size=6582943218 nlink=4 ino=43910524 dev=66306
+~/hy4/int/drafter-4b/trunk-4b/dfly_layers.safetensors size=1611641976 nlink=2 ino=62521426 dev=66306
+~/hy4/int/drafter-4b/trunk-4b/lm_head.safetensors size=371450436 nlink=2 ino=62521425 dev=66306
+~/hy4/int/drafter-4b/trunk-4b/trunk.index.json size=349115 nlink=2 ino=62521427 dev=66306
+## step3_handout_and_check.log
+2026-11-21T23:11:51Z === ROUTE CHECK ON node1 ===
+route node1->node2: 192.168.101.10 dev enp1s0f1np1 src 192.168.101.1 uid 1000
+route node1->node3: 192.168.102.11 dev enp1s0f0np0 src 192.168.102.1 uid 1000
+2026-11-21T23:11:52Z === PRE-COPY DISK CHECK ===
+node2 BEFORE_DF=/dev/nvme0n1p2 4031871553536 3003540795392 823489908736  79% / BEFORE_MEM=116.97 GiB
+node3 BEFORE_DF=/dev/nvme0n1p2 4031871553536 3648151162880 178879541248  96% / BEFORE_MEM=116.74 GiB
+2026-11-21T23:11:53Z === COPYING ~/hy4/int/drafter-4b node1 -> node2 (192.168.101.10) ===
+  node2 config.json: bytes=11537 sha=32435bb43d4b dt=0.689s (0.00 Gb/s)
+  node2 model-00245-of-00245.safetensors: bytes=6582943218 sha=01ea25e7ca48 dt=12.985s (4.06 Gb/s)
+  node2 trunk-4b/dfly_layers.safetensors: bytes=1611641976 sha=982762ebe346 dt=3.665s (3.52 Gb/s)
+  node2 trunk-4b/lm_head.safetensors: bytes=371450436 sha=a46a25b710aa dt=1.496s (1.99 Gb/s)
+  node2 trunk-4b/trunk.index.json: bytes=349115 sha=d7ae06363c99 dt=0.721s (0.00 Gb/s)
+node2 COPY_DONE bytes=8566396282 wall_s=21.332 AFTER_DF=/dev/nvme0n1p2 4031871553536 3012107235328 814923468800  79% / AFTER_MEM=116.31 GiB
+2026-11-21T23:12:15Z === COPYING ~/hy4/int/drafter-4b node1 -> node3 (192.168.102.11) ===
+  node3 config.json: bytes=11537 sha=32435bb43d4b dt=0.700s (0.00 Gb/s)
+  node3 model-00245-of-00245.safetensors: bytes=6582943218 sha=01ea25e7ca48 dt=16.894s (3.12 Gb/s)
+  node3 trunk-4b/dfly_layers.safetensors: bytes=1611641976 sha=982762ebe346 dt=4.480s (2.88 Gb/s)
+  node3 trunk-4b/lm_head.safetensors: bytes=371450436 sha=a46a25b710aa dt=1.718s (1.73 Gb/s)
+  node3 trunk-4b/trunk.index.json: bytes=349115 sha=d7ae06363c99 dt=0.697s (0.00 Gb/s)
+node3 COPY_DONE bytes=8566396282 wall_s=26.300 AFTER_DF=/dev/nvme0n1p2 4031871553536 3656717598720 170313105408  96% / AFTER_MEM=116.08 GiB
+2026-11-21T23:12:42Z === IN-PLACE CHECKS (tools/drafter_folder.sh DIR DIR) ===
+--- CHECK node1 (wall_s=5.331) ---
+== checking ~/hy4/int/drafter-4b in place
+OK      config.json
+OK      model-00245-of-00245.safetensors
+OK      trunk-4b/dfly_layers.safetensors
+OK      trunk-4b/lm_head.safetensors
+OK      trunk-4b/trunk.index.json
+drafter folder ~/hy4/int/drafter-4b: 5 files, 8566396282 bytes, each equal to launch/weights.sha256; set DRAFTER_DIR="~/hy4/int/drafter-4b"
+--- CHECK node2 (wall_s=5.420) ---
+== checking ~/hy4/int/drafter-4b in place
+OK      config.json
+OK      model-00245-of-00245.safetensors
+OK      trunk-4b/dfly_layers.safetensors
+OK      trunk-4b/lm_head.safetensors
+OK      trunk-4b/trunk.index.json
+drafter folder ~/hy4/int/drafter-4b: 5 files, 8566396282 bytes, each equal to launch/weights.sha256; set DRAFTER_DIR="~/hy4/int/drafter-4b"
+--- CHECK node3 (wall_s=9.534) ---
+== checking ~/hy4/int/drafter-4b in place
+OK      config.json
+OK      model-00245-of-00245.safetensors
+OK      trunk-4b/dfly_layers.safetensors
+OK      trunk-4b/lm_head.safetensors
+OK      trunk-4b/trunk.index.json
+drafter folder ~/hy4/int/drafter-4b: 5 files, 8566396282 bytes, each equal to launch/weights.sha256; set DRAFTER_DIR="~/hy4/int/drafter-4b"
+2026-11-21T23:13:02Z === ALL_DONE ===

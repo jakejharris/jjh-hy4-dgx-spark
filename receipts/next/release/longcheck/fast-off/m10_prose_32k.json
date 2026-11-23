@@ -1,0 +1,66 @@
+{
+  "id": "m10_prose_32k",
+  "group": "main",
+  "kind": "prose",
+  "tag": "fast-off",
+  "utc": "2026-11-22T22:46:29Z",
+  "model": "frozen-78l-dfly",
+  "max_tokens": 32,
+  "expected_rendered_tokens": 32766,
+  "prompt_tokens": 32766,
+  "completion_tokens": 29,
+  "finish_reason": "stop",
+  "wall_s": 243.127,
+  "content": "ARCHIVE_REF=ARC-5519 | RING_BUDGET=24800MB | CLOSING_KEY=TOPAZ-441",
+  "text_sha256": "8a165c69947b6c7d551952ddc5c851e5337d1ede379ebfa06d025249360dbe37",
+  "token_ids": [
+    17075,
+    16078,
+    96994,
+    28,
+    47500,
+    12,
+    33263,
+    24,
+    368,
+    463,
+    4273,
+    6458,
+    13635,
+    13987,
+    28,
+    20098,
+    467,
+    9817,
+    368,
+    12762,
+    3459,
+    4273,
+    25307,
+    28,
+    49034,
+    45264,
+    12,
+    27614,
+    120025
+  ],
+  "token_sha256": "681b1bbbd591dcdb6baa98ed0176972dbbd134b47b32f7224d44b4d35ee3b20d",
+  "facts": [
+    {
+      "key": "ARCHIVE_REF",
+      "expected": "ARC-5519",
+      "right": true
+    },
+    {
+      "key": "RING_BUDGET",
+      "expected": "24800MB",
+      "right": true
+    },
+    {
+      "key": "CLOSING_KEY",
+      "expected": "TOPAZ-441",
+      "right": true
+    }
+  ],
+  "loop_or_broken": null
+}

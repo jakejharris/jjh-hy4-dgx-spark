@@ -1,0 +1,36 @@
+{
+  "model": "frozen-78l-dfly",
+  "overall_pass": true,
+  "checks": {
+    "jpeg_kestrel_card": {
+      "status": 200,
+      "latency_s": 4.893,
+      "answer": "Based on the image provided, here is the exact information:\n\n*   **Code:** `KESTREL-4729`\n*   **Port:** `18080`\n*   **Status:** `READY`",
+      "pass": true
+    },
+    "jpeg_74_red_blue": {
+      "status": 200,
+      "latency_s": 2.819,
+      "answer": "The number 74 is in the center, with a red left half and a blue right half.",
+      "pass": true
+    },
+    "webp_bar_chart": {
+      "status": 200,
+      "latency_s": 10.147,
+      "answer": "Let me analyze the bar chart step by step.\n\n**Step 1: Identify the values for each day**\n- Monday (MON): blue bar with value 20\n- Tuesday (TUE): red bar with value 75\n- Wednesday (WED): green bar with value 40\n- Thursday (THU): orange bar with value 90\n\n**Step 2: Find the highest bar**\nComparing all values: 20, 75, 40, 90\nThe highest value is 90, which corresponds to Thursday (THU).\n\n**Step 3: Find the lowest bar**\nThe lowest value is",
+      "pass": true
+    },
+    "webp_39_green_yellow": {
+      "status": 200,
+      "latency_s": 2.748,
+      "answer": "The number is 39, the top half is green, and the bottom half is yellow.",
+      "pass": true
+    },
+    "text_after_vision": {
+      "status": 200,
+      "latency_s": 0.438,
+      "answer": "4",
+      "pass": true
+    }
+  }
+}

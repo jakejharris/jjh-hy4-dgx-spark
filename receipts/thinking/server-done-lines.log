@@ -1,0 +1,7 @@
+# The server's done lines, unchanged but for home folders, from rank 0's log of two boots of the full quant, 2026-11-21.
+# Boot 1 (finding 6 probes, no server budget): P3 sent "thinking_budget": 4096. grep 'done chatcmpl' on rank 0's log; the P3 line:
+[tensorfold] done chatcmpl-ac3baf4c8c54de5516709d67a2b5708f prompt=137 cached=0 thinking=True effort=high tokens=6082 sha=8150d3269a82 finish=stop rounds=1949 calls=1941 offered=6700 accepted=4132/6700 ttft=0.826 decode=214.059 elapsed=214.886 queued=0.000 tok/s=28.4
+# Boot 2 (SERVE_THINKING_BUDGET="4096", the kit's launcher at 9cf80ed): P5, P6, P7 in order, no thinking_budget field.
+[tensorfold] done chatcmpl-680401ac1c831038cc8d70090991bfd1 prompt=137 cached=0 thinking=True effort=high tokens=6082 sha=8150d3269a82 finish=stop rounds=1949 calls=1941 offered=6700 accepted=4132/6700 ttft=1.498 decode=214.117 elapsed=215.615 queued=0.000 tok/s=28.4
+[tensorfold] done chatcmpl-adcbfcd959a66c34e69b1ac25f0fc388 prompt=137 cached=0 thinking=True effort=high tokens=8192 sha=203613b696ae finish=length rounds=5208 calls=1895 offered=5863 accepted=2983/5863 ttft=0.873 decode=595.532 elapsed=596.405 queued=0.000 tok/s=13.8 seed=20260905
+[tensorfold] done chatcmpl-5d4baccf09110f751c3f4e6a06aedcfb prompt=140 cached=0 thinking=False effort=none tokens=2409 sha=918711d85018 finish=stop rounds=502 calls=502 offered=2672 accepted=1906/2672 ttft=0.833 decode=61.791 elapsed=62.624 queued=0.000 tok/s=39.0

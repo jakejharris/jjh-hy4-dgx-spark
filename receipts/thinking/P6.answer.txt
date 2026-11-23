@@ -1,0 +1,234 @@
+Need continue design thoroughly. Need answer final only two code blocks. Need include filename with each. Need ensure code compiles. Need exact semantics and tests. Need maybe produce with code block info strings like ```go filename=limiter.go. Need no prose. Need if markdown info string qualifies as filename? likely. Could also include first line `// limiter.go`? The user asked code block with filename; I'd use `// limiter.go` inside code plus info string. But they asked "one implementation code block and one test code block, each with its filename". If "filename" is in info string, it's not code; okay. Need no prose. Could use:
+```go filename=limiter.go
+...
+```
+Need maybe info string with spaces is okay Markdown. Need if a parser expects language first token only `go`; filename attr after. Good. Need second `go filename=limiter_test.go`. Need no prose.
+
+Need decide implementation details.
+
+Let's think carefully about token bucket semantics and race.
+
+Need package API:
+```
+package ratelimit
+
+// Clock supplies the current time. Implementations must be safe for concurrent use.
+type Clock interface { Now() time.Time }
+
+// SystemClock is a Clock backed by time.Now.
+type SystemClock struct{}
+func (SystemClock) Now() time.Time { return time.Now() }
+```
+Need "injectable clock" maybe exported SystemClock. Need allow custom. Could name `clock` unexported? For injection, interface exported. Need default clock not necessarily exported but okay. Need constructor New uses `SystemClock{}`. Need NewWithClock. Need validation of typed nil clock? We can write helper with reflect. Let's consider.
+
+Need maybe errors:
+```
+var (
+    ErrInvalidRate = errors.New("ratelimit: rate must be finite and positive")
+    ErrInvalidBurst = errors.New("ratelimit: burst must be positive")
+    ErrNilClock = errors.New("ratelimit: clock must not be nil")
+)
+```
+Need maybe if rate invalid from NaN. Need use `math.IsNaN(rate) || math.IsInf(rate, 0) || rate <= 0`. Because `math.IsNaN(rate)` not enough; `rate <=0` false for NaN; need both.
+Need burst int >0. Need clock nil. Need maybe `clock == nil` plus typed nil. Let's include reflect helper? Implementation compact production-quality. Let's draft:
+```
+func isNilClock(c Clock) bool {
+    if c == nil { return true }
+    v := reflect.ValueOf(c)
+    switch v.Kind() {
+    case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+        return v.IsNil()
+    default:
+        return false
+    }
+}
+```
+Need import reflect. Could include. Need if `reflect.ValueOf` on nil? handled. Need if interface contains a nil-able kind. Need if Clock implemented by function type maybe nil; handled. Need if implementation by nil pointer with value receiver method? Need method set? For pointer receiver, nil pointer can implement; calling method may panic if deref. For value receiver on pointer? Calling on nil pointer with value receiver automatically dereferences? Actually if method has value receiver `func (c *T) Now` pointer receiver can avoid deref. If method has pointer receiver and doesn't deref nil, could be okay. But isNilClock returns true for any nil pointer. That's safe conservative. Need `reflect` acceptable. Could skip to keep compact. But "constructor validation" includes typed nil robust. Good.
+
+Need maybe use `fmt.Errorf` with wrapping? Need sentinel errors enough. Need if rate = 0, burst 0, clock nil, returns exact sentinel. Tests can use errors.Is. Need wrap? No.
+
+Need `New` and `NewWithClock`: Need if clock nil in NewWithClock returns ErrNilClock; if New passes SystemClock nonnil. Need if `clock.Now()` returns zero time? okay. Need if custom clock panics? not validate. Need if `clock.Now()` for typed nil can be caught. Need if `clock.Now()` can be called concurrently? Need docs "must be safe for concurrent use" implementation can't enforce. Need maybe `Clock` interface doc. Need no external dependencies.
+
+Need `Limiter` fields:
+```
+type Limiter struct {
+    clock Clock
+    rate float64
+    burst int
+
+    mu sync.Mutex
+    tokens float64
+    last time.Time
+}
+```
+Need note rate/burst immutable after construction; no mutex needed for reading in AllowN? Need l.burst read under mutex? Since no mutation, safe; but could read outside. But for simplicity lock before. Need if l.clock immutable. Need `AllowN` obtains clock.Now under l.mu. Need if clock.Now blocks; okay. Need if clock implementation itself calls limiter? no.
+
+Need use `float64(l.burst)`. Need if burst > max float64? int max on 64-bit ~9e18, float64 exactly? not all but okay. Need need := float64(n). Need n > l.burst false. Need if n int negative -> false. Need if n=0 false. Need if n > burst with rate? no. Need if n > MaxInt? cannot. Need if n == burst and tokens full -> allow, tokens 0. Need if n > burst false. Need if tokens fractional; n int. Need rate 0.5. Need fractional tokens. Need if tokens 0.999 and n=1 false; tokens unchanged (but time advanced). Next small time may allow. Need no rounding weird. Need maybe use epsilon? no.
+
+Need `advance` function. Need need to handle huge elapsed and Inf/NaN. Let's design robust:
+```
+func (l *Limiter) advance(now time.Time) {
+    elapsed := now.Sub(l.last)
+    if elapsed <= 0 {
+        if now.Before(l.last) { l.last = now } // or always set? 
+        return
+    }
+    l.last = now
+    added := elapsed.Seconds() * l.rate
+    if math.IsNaN(added) || math.IsInf(added, 0) || added >= float64(l.burst)-l.tokens {
+       l.tokens = float64(l.burst)
+       return
+    }
+    l.tokens += added
+    if l.tokens > float64(l.burst) { l.tokens = float64(l.burst) }
+}
+```
+Need this avoids computing `tokens` as Inf. Need compare `added >= deficit`. If `added` is Inf, cap. If `added` is NaN, cap? Could cap maybe weird. Need rate finite; elapsed.Seconds finite; product could be 0*Inf? no. Could be `rate` finite but huge and elapsed seconds 0? If elapsed >0 but small, elapsed.Seconds() maybe >0? time.Duration.Seconds() returns `float64(d) / 1e9`, for d=1 ns >0. Product huge could be finite or Inf. No NaN. But added could be +Inf. Need cap. Need deficit may be Inf? `float64(l.burst)` finite, l.tokens finite. Good. Need if `l.tokens` somehow NaN? Could happen if custom clock not? no. But if `l.tokens` becomes NaN from bugs. Could guard: if `math.IsNaN(l.tokens)` set cap? Maybe not necessary. For robustness, if `l.tokens` NaN then `deficit` NaN, added NaN? no. Need maybe set if `l.tokens < 0 || math.IsNaN(l.tokens) { l.tokens = 0 }`? Since we don't expose tokens. no. Need if added == 0 due rate tiny underflow? tokens stays. Good. Need if added negative? elapsed >0, rate >0 => positive. Need if `now.Sub(last)` saturates to max/min; elapsed.Seconds finite. Need if `now.Sub(last)` negative due clock going backward; it saturates min. Need decide elapsed <=0 branch.
+
+Need handle clock going backwards. Options:
+- Do not change last: `if elapsed <= 0 { return }`. Then if clock jumps backwards, no refill until catches up. This is conceptually okay if clock must be monotonic; docs say Clock must be monotonic. But if it doesn't catch up, stuck. Could set `last = now` to resync. Need production-quality: "Clock implementations should be monotonic; if now is before last, limiter resynchronizes without minting tokens." Need tests maybe include clock backwards. Need fake clock table-driven could test. Need decide branch.
+
+Let's think semantics and potential double credit. Suppose we set last=now on backward. If clock `now` goes backward due system wall clock NTP correction from t=100 to t=90. We set last=90. At t=100 (10s later wall time, but real elapsed maybe 0? if correction instantaneous?) limiter credits 10s, minting tokens. If we didn't set last, no credit until wall catches up (which might be immediate if correction to 100). Could be safer to not mint tokens on negative elapsed; just ignore and keep last. But if fake clock set backward and then advance, will credit from last? Example last=10, now=5, do not update, next now=7, elapsed=-3 no credit, next now=11 elapsed=1 credit 1s (from 10 to 11), which is reasonable if wall time catches up. If set last=5, next 11 credit 6s, over-credit. Hmm. To avoid over-credit on non-monotonic clock, should not update last on negative elapsed. But if clock permanently rewound lower than last, limiter stuck until time exceeds old last; docs require monotonic. Since real time.Now has monotonic component, no issue. Need maybe say Clock must be monotonic. For fake clock, monotonic. Need if clock rewinds, no credit. This might be considered production-quality. Need maybe no reset. Need no backward test maybe. Need if wall clock doesn't include monotonic and NTP backwards, ignoring negative prevents minting tokens but stuck for duration of backward offset. But perhaps acceptable. Need maybe a more advanced approach: Use a max of `last` and `now`? Could set last to min? Need need avoid stuck and over-credit. We can measure with monotonic clock; for injectable, document must monotonic. Need no need. But "clock may be injectable" maybe fake; tests advance forward.
+
+Need include doc comment: `Clock must be monotonic and safe for concurrent use.` Then advance can ignore negative. Need if nonmonotonic, no credit. Need maybe if now.Before(last), set last=now? hmm. There is no perfect solution without separate monotonic source. If we assume monotonic, negative only due clock violation. Need choose with security: do not mint tokens for backward jumps; keep last. This is more conservative. Need no `l.last = now` on negative. But then if fake clock resets backwards forever, no tokens; okay. Need tests not need backward. Need if custom fake clock moves backwards then needs reset by new limiter. Good.
+
+Need if `now.Sub(l.last)` overflows and saturates to max Duration if now far future. Need add cap. Need if clock.Now returns time.Time with monotonic component and fake uses no monotonic, `Sub` works. Need if `l.last` has monotonic and custom clock returns no monotonic later? time.Sub strips? In Go, if one Time has monotonic and other doesn't, Sub uses wall clock; okay. Need if custom clock returns wall-only. Good.
+
+Need maybe `advance` can be called with now equal to last; no credit; no need update. Should last=now? If equal, it might replace monotonic reading with wall-only custom; better to keep? Need no need. If `elapsed <=0`, return. If equal from monotonic clock, okay. If now equal wall but no monotonic? l.last from previous clock. no matter. Need maybe if clock changes from monotonic to wall-only at same wall instant? no.
+
+Need rate limit doc with units. Need constructor semantics. Need maybe `New` starts full bucket. Need `AllowN` consumes n tokens iff all are available. Need if n<=0 false. Need if n>burst false. Need note `AllowN` is safe for concurrent use. Need `Allow` convenience. Need maybe expose `Tokens`? not needed. Need compact.
+
+Need maybe Clock in implementation should be named `Clock` with Now. Need SystemClock maybe exported. Need if default `New` calls `NewWithClock(rate, burst, SystemClock{})`. Need if `Clock` interface's Now method must be safe for concurrent use because `AllowN` calls it under mutex; actually under limiter's mutex, so calls to Clock.Now are serialized by limiter, but different limiters may share same clock. Need docs. Need if fake clock `Now` mutex. Good.
+
+Need test design.
+
+Need table-driven tests using fake clock. Need maybe include constructor validation table too. Need no prose. Need code compile.
+
+Let's draft implementation code:
+
+```go
+// limiter.go
+package ratelimit
+
+import (
+    "errors"
+    "math"
+    "reflect"
+    "sync"
+    "time"
+)
+
+type Clock interface {
+    Now() time.Time
+}
+
+type SystemClock struct{}
+func (SystemClock) Now() time.Time { return time.Now() }
+
+var (
+    ErrInvalidRate = errors.New("ratelimit: rate must be finite and positive")
+    ErrInvalidBurst = errors.New("ratelimit: burst must be positive")
+    ErrNilClock = errors.New("ratelimit: clock must not be nil")
+)
+
+type Limiter struct {
+    clock Clock
+    rate float64
+    burst int
+
+    mu sync.Mutex
+    tokens float64
+    last time.Time
+}
+
+func New(rate float64, burst int) (*Limiter, error) {
+    return NewWithClock(rate, burst, SystemClock{})
+}
+
+func NewWithClock(rate float64, burst int, clock Clock) (*Limiter, error) {
+    if math.IsNaN(rate) || math.IsInf(rate, 0) || rate <= 0 {
+        return nil, ErrInvalidRate
+    }
+    if burst <= 0 {
+        return nil, ErrInvalidBurst
+    }
+    if isNilClock(clock) {
+        return nil, ErrNilClock
+    }
+    return &Limiter{
+        clock: clock,
+        rate: rate,
+        burst: burst,
+        tokens: float64(burst),
+        last: clock.Now(),
+    }, nil
+}
+
+func (l *Limiter) Allow() bool { return l.AllowN(1) }
+
+func (l *Limiter) AllowN(n int) bool {
+    if n <= 0 {
+        return false
+    }
+
+    l.mu.Lock()
+    defer l.mu.Unlock()
+
+    if n > l.burst {
+        return false
+    }
+
+    now := l.clock.Now()
+    l.advance(now)
+
+    need := float64(n)
+    if l.tokens < need {
+        return false
+    }
+    l.tokens -= need
+    return true
+}
+
+func (l *Limiter) advance(now time.Time) {
+    elapsed := now.Sub(l.last)
+    if elapsed <= 0 {
+        return
+    }
+    l.last = now
+
+    added := elapsed.Seconds() * l.rate
+    deficit := float64(l.burst) - l.tokens
+    if math.IsNaN(added) || math.IsInf(added, 0) || added >= deficit {
+        l.tokens = float64(l.burst)
+        return
+    }
+    l.tokens += added
+}
+
+func isNilClock(c Clock) bool {
+    if c == nil { return true }
+    v := reflect.ValueOf(c)
+    switch v.Kind() {
+    case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+        return v.IsNil()
+    default:
+        return false
+    }
+}
+```
+
+Need consider if `l.tokens` can be negative? no. `deficit` positive. If `deficit` NaN due l.tokens NaN, added finite, condition `added >= deficit` false, `l.tokens += added` remains NaN. Could robustly handle:
+```
+if math.IsNaN(l.tokens) || l.tokens < 0 { l.tokens = 0 }
+```
+But no way l.tokens NaN. Could include. Need if `added` is NaN (shouldn't), setting tokens=burst maybe okay. Need if added Inf, cap. Need if `deficit` <=0 (tokens > burst due bug) then cap maybe condition added >= deficit true if added >=0; set full. Good. Need if added finite but l.tokens + added > burst; `added >= deficit` captures. Need if l.tokens NaN, deficit NaN, condition false. Need maybe not worry. But production-quality maybe guard:
+```
+if math.IsNaN(l.tokens) || l.tokens < 0 { l.tokens = 0 }
+```
+Need initial tokens from burst; no mutation below. no.
+
+Need issue with `advance`: l.last = now before capping. If added NaN -> set tokens burst. Fine. If clock goes backwards, no update. If clock jumps forward huge with rate huge -> added Inf, cap. Good.
+
+Need issue: if `n > l.burst`, we return false before calling clock.Now/advance. Is that concurrency safe? l.burst immutable. Good. But state's `last` remains old; future calls with n <= burst will credit full elapsed since last. This is correct time passage. Need if n > burst and clock.Now would be expensive; skip. Need if clock goes backwards during rejected calls, later last could be future and ignore negative. Okay. Need if now is called under lock; if n>burst skip clock, no need. Need if concurrent calls: one with n>burst returns false no state; one normal gets lock. Fine.
+
+Need issue: `AllowN` n<=0 false without lock. state no access. Fine. Need docs? Need comment. Need tests include. Need maybe user expects n=0 true (like Go x/time/rate). Should we choose false. Need "AllowN" is general; no explicit. Need table tests can set false. Is false okay? Need maybe production-quality? Let's think. In rate limiting, a request for zero tokens shouldn't be allowed? There's philosophical. x/time/rate docs: `AllowN` reports whether n events may happen at time now. "If n <= 0, AllowN returns true" maybe? Let's verify x/time/rate: In `reserveN`, `lim.mu.Lock()`, if lim.limit == Inf return okay; else `now, last, tokens := lim.advance(now)`, then `tokens -= float64(n)`; if tokens <0, not okay. Anyway for `AllowN`: `return lim.reserveN(now, n, 0).ok`. In reserveN: `if lim.limit == Inf { return ... ok = true }`, `lim.advance(now)`, `tokens -= float64(n)`,

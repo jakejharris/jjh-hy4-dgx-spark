@@ -1,0 +1,334 @@
+```go
+// limiter.go
+package tokenbucket
+
+import (
+	"errors"
+	"fmt"
+	"sync"
+	"time"
+)
+
+// Clock supplies the current time. It is injectable for deterministic tests.
+type Clock interface {
+	Now() time.Time
+}
+
+type systemClock struct{}
+
+func (systemClock) Now() time.Time { return time.Now() }
+
+// Limiter is a concurrency-safe token-bucket rate limiter.
+// It refills continuously at rate tokens per second up to capacity tokens.
+type Limiter struct {
+	mu sync.Mutex
+
+	clock    Clock
+	capacity float64
+	rate     float64
+	tokens   float64
+	last     time.Time
+}
+
+// New creates a Limiter with the given capacity, refill rate, and clock.
+// If clock is nil, the system clock is used.
+func New(capacity, rate float64, clock Clock) (*Limiter, error) {
+	if capacity <= 0 || capacity != capacity || capacity > 1e18 {
+		return nil, fmt.Errorf("tokenbucket: invalid capacity %v", capacity)
+	}
+	if rate <= 0 || rate != rate || rate > 1e18 {
+		return nil, fmt.Errorf("tokenbucket: invalid rate %v", rate)
+	}
+	if clock == nil {
+		clock = systemClock{}
+	}
+
+	return &Limiter{
+		clock:    clock,
+		capacity: capacity,
+		rate:     rate,
+		tokens:   capacity,
+		last:     clock.Now(),
+	}, nil
+}
+
+// Allow reports whether one token is available and consumes it if so.
+func (l *Limiter) Allow() bool {
+	return l.AllowN(1)
+}
+
+// AllowN reports whether n tokens are available and consumes them if so.
+// n must be positive and no greater than capacity. Requests larger than
+// capacity can never succeed and are rejected without consuming tokens.
+func (l *Limiter) AllowN(n int64) bool {
+	if n <= 0 || float64(n) > l.capacity {
+		return false
+	}
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	now := l.clock.Now()
+	if now.After(l.last) {
+		elapsed := now.Sub(l.last).Seconds()
+		l.tokens = min(l.capacity, l.tokens+elapsed*l.rate)
+		l.last = now
+	}
+
+	need := float64(n)
+	if l.tokens < need {
+		return false
+	}
+	l.tokens -= need
+	return true
+}
+
+// Tokens returns the currently available tokens after applying refill.
+func (l *Limiter) Tokens() float64 {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	now := l.clock.Now()
+	if now.After(l.last) {
+		elapsed := now.Sub(l.last).Seconds()
+		l.tokens = min(l.capacity, l.tokens+elapsed*l.rate)
+		l.last = now
+	}
+	return l.tokens
+}
+
+func min(a, b float64) float64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// ErrInvalidConfig is retained for callers that prefer errors.Is-style checks.
+var ErrInvalidConfig = errors.New("tokenbucket: invalid configuration")
+```
+
+```go
+// limiter_test.go
+package tokenbucket
+
+import (
+	"errors"
+	"math"
+	"sync"
+	"testing"
+	"time"
+)
+
+type fakeClock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+func newFakeClock(t time.Time) *fakeClock { return &fakeClock{now: t} }
+
+func (c *fakeClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.now
+}
+
+func (c *fakeClock) Advance(d time.Duration) {
+	c.mu.Lock()
+	c.now = c.now.Add(d)
+	c.mu.Unlock()
+}
+
+func TestNewValidation(t *testing.T) {
+	base := time.Unix(0, 0).UTC()
+	clk := newFakeClock(base)
+
+	tests := []struct {
+		name     string
+		capacity float64
+		rate     float64
+		clock    Clock
+		wantErr  bool
+	}{
+		{"valid", 10, 2, clk, false},
+		{"nil clock uses system", 10, 2, nil, false},
+		{"zero capacity", 0, 2, clk, true},
+		{"negative capacity", -1, 2, clk, true},
+		{"nan capacity", math.NaN(), 2, clk, true},
+		{"zero rate", 10, 0, clk, true},
+		{"negative rate", 10, -1, clk, true},
+		{"nan rate", 10, math.NaN(), clk, true},
+		{"huge capacity", 1e19, 2, clk, true},
+		{"huge rate", 10, 1e19, clk, true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			l, err := New(tc.capacity, tc.rate, tc.clock)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("New() err = %v, wantErr %v", err, tc.wantErr)
+			}
+			if tc.wantErr {
+				if !errors.Is(err, err) || err == nil {
+					t.Fatalf("expected non-nil error")
+				}
+				if l != nil {
+					t.Fatalf("expected nil limiter on error")
+				}
+				return
+			}
+			if l == nil {
+				t.Fatalf("expected limiter")
+			}
+			if got := l.Tokens(); got != tc.capacity {
+				t.Fatalf("initial tokens = %v, want %v", got, tc.capacity)
+			}
+		})
+	}
+}
+
+func TestAllowNTableDriven(t *testing.T) {
+	base := time.Unix(0, 0).UTC()
+
+	tests := []struct {
+		name     string
+		capacity float64
+		rate     float64
+		steps    []struct {
+			advance time.Duration
+			n       int64
+			want    bool
+			tokens  float64
+		}
+	}{
+		{
+			name:     "drain and partial refill",
+			capacity: 3,
+			rate:     2, // 1 token per 500ms
+			steps: []struct {
+				advance time.Duration
+				n       int64
+				want    bool
+				tokens  float64
+			}{
+				{0, 2, true, 1},
+				{0, 2, false, 1},
+				{250 * time.Millisecond, 1, true, 0.5},
+				{250 * time.Millisecond, 1, true, 0},
+				{time.Second, 3, false, 2},
+				{500 * time.Millisecond, 3, true, 0},
+			},
+		},
+		{
+			name:     "refill capped at capacity",
+			capacity: 5,
+			rate:     10,
+			steps: []struct {
+				advance time.Duration
+				n       int64
+				want    bool
+				tokens  float64
+			}{
+				{0, 5, true, 0},
+				{10 * time.Second, 0, false, 5},
+				{0, 5, true, 0},
+			},
+		},
+		{
+			name:     "invalid n never consumes",
+			capacity: 2,
+			rate:     1,
+			steps: []struct {
+				advance time.Duration
+				n       int64
+				want    bool
+				tokens  float64
+			}{
+				{0, 0, false, 2},
+				{0, -1, false, 2},
+				{0, 3, false, 2},
+				{0, 2, true, 0},
+			},
+		},
+		{
+			name:     "clock going backwards does not refill",
+			capacity: 2,
+			rate:     1,
+			steps: []struct {
+				advance time.Duration
+				n       int64
+				want    bool
+				tokens  float64
+			}{
+				{0, 2, true, 0},
+				{-time.Second, 1, false, 0},
+				{time.Second, 1, true, 0},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			clk := newFakeClock(base)
+			l, err := New(tc.capacity, tc.rate, clk)
+			if err != nil {
+				t.Fatalf("New: %v", err)
+			}
+
+			for i, s := range tc.steps {
+				clk.Advance(s.advance)
+				got := l.AllowN(s.n)
+				if got != s.want {
+					t.Fatalf("step %d: AllowN(%d) = %v, want %v", i, s.n, got, s.want)
+				}
+				if tokens := l.Tokens(); math.Abs(tokens-s.tokens) > 1e-9 {
+					t.Fatalf("step %d: tokens = %v, want %v", i, tokens, s.tokens)
+				}
+			}
+		})
+	}
+}
+
+func TestAllowNConcurrent(t *testing.T) {
+	clk := newFakeClock(time.Unix(0, 0).UTC())
+	l, err := New(100, 0, clk)
+	if err == nil {
+		t.Fatal("expected invalid rate error")
+	}
+
+	l, err = New(100, 1, clk)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	const goroutines = 64
+	const perGoroutine = 10
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	allowed := 0
+
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			local := 0
+			for j := 0; j < perGoroutine; j++ {
+				if l.AllowN(1) {
+					local++
+				}
+			}
+			mu.Lock()
+			allowed += local
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
+
+	if allowed != 100 {
+		t.Fatalf("allowed = %d, want 100", allowed)
+	}
+	if got := l.Tokens(); math.Abs(got) > 1e-9 {
+		t.Fatalf("tokens = %v, want 0", got)
+	}
+}
+```

@@ -1,0 +1,49 @@
+{
+ "model": "frozen-78l-dfly",
+ "utc_start": "2026-11-22T23:13:29Z",
+ "probes": {
+  "tool_auto": {
+   "status": 200,
+   "seconds": 4.8,
+   "finish_reason": "tool_calls",
+   "tool_calls": [
+    {
+     "id": "call_50e5abae6c90b1b41c7b77e0",
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "arguments": "{\"city\":\"Austin, TX\"}"
+     }
+    }
+   ],
+   "content": "I'll check the current weather for Austin, TX using the weather tool.",
+   "reasoning_chars": 177,
+   "usage": {
+    "prompt_tokens": 207,
+    "completion_tokens": 78,
+    "total_tokens": 285,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+     "reasoning_tokens": 46
+    }
+   }
+  },
+  "tool_required": {
+   "status": 400,
+   "seconds": 0.02,
+   "error_message": "backend 'cuda' cannot enforce tool_choice \"required\" or a named function: it has no token grammar support; send \"auto\" or \"none\""
+  },
+  "format_json_schema": {
+   "status": 400,
+   "seconds": 0.02,
+   "error_message": "structured output (response_format and the guided_* fields) is not supported by this engine yet"
+  },
+  "format_json_object": {
+   "status": 400,
+   "seconds": 0.01,
+   "error_message": "structured output (response_format and the guided_* fields) is not supported by this engine yet"
+  }
+ }
+}

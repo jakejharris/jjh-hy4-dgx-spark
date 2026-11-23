@@ -1,0 +1,26 @@
+{
+  "wall_s": 7.7448,
+  "ttft_s": 3.3327,
+  "decode_s": 4.4122,
+  "prompt_tokens": 576,
+  "completion_tokens": 143,
+  "prefill_tok_s": 172.83,
+  "decode_tok_s": 32.18,
+  "finish_reason": "stop",
+  "combined_sha256": "10b6a303c9d1b821015f0430801e1f87950b51c2006c43ab8aacef35491ae44a",
+  "usage": {
+    "prompt_tokens": 576,
+    "completion_tokens": 143,
+    "total_tokens": 719,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 103
+    }
+  },
+  "timings": {},
+  "reasoning_content": "We need answer straightforward. Need inspect chart. Values labels: Mon 20, Tue 75, Wed 40, Thu 90. Highest Thursday 90, lowest Monday 20. Need perhaps mention four values Monday to Thursday. Need ensure no trick: bar heights correspond. Answer concise. Need maybe say \"Thursday has highest bar (90), Monday lowest (20); values Mon\u2013Thu: 20, 75, 40, 90.\" Need perhaps no need elaborate. Ensure exact.",
+  "content": "- **Highest:** Thursday, **90**\n- **Lowest:** Monday, **20**\n- **Monday to Thursday values:** **20, 75, 40, 90**",
+  "sse_events": 46
+}

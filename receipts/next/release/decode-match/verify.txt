@@ -1,0 +1,4 @@
+MATCH
+code=[3182, 2572, 2581] prose=[1424, 1402, 1372] structured=[422, 422, 422]
+medians: code=37.686 prose=19.068 structured=54.583 tok/s
+shas=['7a666f5b4f0a', '08171a4cd401', '2e7486d0839d', '549389b515f3', '0336e0e3bc7e', 'bc04c3d67313', 'dabaf84ed0f0', 'dabaf84ed0f0', 'dabaf84ed0f0']

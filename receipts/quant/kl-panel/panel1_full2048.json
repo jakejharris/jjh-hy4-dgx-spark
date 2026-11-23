@@ -1,0 +1,155 @@
+{
+  "utc": "2026-11-22T23:38:42Z",
+  "reference": {
+    "path": "/ref/bf16_ref_logits.safetensors",
+    "sha256": "e9fa7eaf0c0476f5dd04db3ebfa2e7f39cec18c10a607d659eeaa39e7c9842b9",
+    "shape": [
+      2048,
+      120832
+    ],
+    "metadata": {}
+  },
+  "matched_subset_path": null,
+  "bootstrap_draws": 1000,
+  "seed": 20261120,
+  "rows": [
+    {
+      "label": "Lossless trunk (331.69 GB, 3.45 bpw)",
+      "path": "~/hy4/kl-panel/out/panel1_lossless_logits.safetensors",
+      "sha256": "239cc4327ed4223db26e351d76d2793d605678866a68b319e53c4692d1d20a35",
+      "metadata": {
+        "format": "pt",
+        "panel_spec_sha256": "1f0cd24ce9f959b6c260c83d6ec4a33ae866215bf745c4bb7fab0374995bf351",
+        "picks_sha256": "48920519fe63304726eb057ee05a07d074e7a474751ae0453faf8b25d987f1fa",
+        "trunk_tag": ""
+      },
+      "vocab_size": 120832,
+      "splits": {
+        "all": {
+          "n_positions": 2048,
+          "n_prompts": 20,
+          "kl_mean": 0.9224888277125775,
+          "kl_ci95": [
+            0.8526740813178408,
+            0.9907257957933793
+          ],
+          "kl_median": 0.00019408721803804401,
+          "kl_p95": 7.920539164883554,
+          "kl_p99": 16.593945354486458,
+          "kl_max": 27.21054241364201,
+          "top1_matched": 1758,
+          "top1_pct": 85.83984375,
+          "top5_overlap_pct": 75.65429687500001,
+          "ref_top1_in_cand_top5_pct": 92.28515625,
+          "bootstrap_mode": "prompt_stratified_torch"
+        },
+        "unpruned_le2048": {
+          "n_positions": 1280,
+          "n_prompts": 20,
+          "kl_mean": 0.2589701494296919,
+          "kl_ci95": [
+            0.1728178008194892,
+            0.34246087440186757
+          ],
+          "kl_median": 0.0001984415418783484,
+          "kl_p95": 0.2801667240872318,
+          "kl_p99": 8.610933942688437,
+          "kl_max": 16.716891072192823,
+          "top1_matched": 1177,
+          "top1_pct": 91.953125,
+          "top5_overlap_pct": 81.34375,
+          "ref_top1_in_cand_top5_pct": 97.5,
+          "bootstrap_mode": "prompt_stratified_torch"
+        },
+        "pruned_gt2048": {
+          "n_positions": 768,
+          "n_prompts": 4,
+          "kl_mean": 2.028353291517387,
+          "kl_ci95": [
+            1.9848497495887585,
+            2.0718568334460157
+          ],
+          "kl_median": 0.0001457479286207607,
+          "kl_p95": 12.588140180388729,
+          "kl_p99": 19.91734250175484,
+          "kl_max": 27.21054241364201,
+          "top1_matched": 581,
+          "top1_pct": 75.65104166666666,
+          "top5_overlap_pct": 66.171875,
+          "ref_top1_in_cand_top5_pct": 83.59375,
+          "bootstrap_mode": "prompt_stratified_torch"
+        }
+      }
+    },
+    {
+      "label": "Full quant 4b6b (300.07 GB, 3.12 bpw)",
+      "path": "~/hy4/kl-panel/out/panel1_4b6b_logits.safetensors",
+      "sha256": "1d5062a59347a9df86fbf0130d00d000719986334899cf171e1ff3b12a85d188",
+      "metadata": {
+        "format": "pt",
+        "panel_spec_sha256": "1f0cd24ce9f959b6c260c83d6ec4a33ae866215bf745c4bb7fab0374995bf351",
+        "picks_sha256": "3ecd4b3e6b5dee5914b13e0fdcbfeacfea4f9ab18f9ac7cb903a38f80711d92d",
+        "trunk_tag": "recipe:trunk-4b,o_proj=trunk-6b,kv_a=trunk-6b"
+      },
+      "vocab_size": 120832,
+      "splits": {
+        "all": {
+          "n_positions": 2048,
+          "n_prompts": 20,
+          "kl_mean": 0.8594808225728757,
+          "kl_ci95": [
+            0.7529996677094021,
+            0.9674137828587446
+          ],
+          "kl_median": 0.00017516618780117463,
+          "kl_p95": 7.193935207067324,
+          "kl_p99": 16.576695346578596,
+          "kl_max": 27.781430699654518,
+          "top1_matched": 1783,
+          "top1_pct": 87.060546875,
+          "top5_overlap_pct": 76.11328125000001,
+          "ref_top1_in_cand_top5_pct": 92.822265625,
+          "bootstrap_mode": "prompt_stratified_torch"
+        },
+        "unpruned_le2048": {
+          "n_positions": 1280,
+          "n_prompts": 20,
+          "kl_mean": 0.3186576766813796,
+          "kl_ci95": [
+            0.25970826980828576,
+            0.37730436873568857
+          ],
+          "kl_median": 0.00020435204169447097,
+          "kl_p95": 0.32317410420059806,
+          "kl_p99": 10.451321530976484,
+          "kl_max": 20.56258785454934,
+          "top1_matched": 1181,
+          "top1_pct": 92.265625,
+          "top5_overlap_pct": 81.3125,
+          "ref_top1_in_cand_top5_pct": 97.03125,
+          "bootstrap_mode": "prompt_stratified_torch"
+        },
+        "pruned_gt2048": {
+          "n_positions": 768,
+          "n_prompts": 4,
+          "kl_mean": 1.7608527323920364,
+          "kl_ci95": [
+            1.552249143038282,
+            1.9694563217457908
+          ],
+          "kl_median": 9.591660952115562e-05,
+          "kl_p95": 11.810755067680132,
+          "kl_p99": 19.230243795683563,
+          "kl_max": 27.781430699654518,
+          "top1_matched": 602,
+          "top1_pct": 78.38541666666666,
+          "top5_overlap_pct": 67.44791666666666,
+          "ref_top1_in_cand_top5_pct": 85.80729166666666,
+          "bootstrap_mode": "prompt_stratified_torch"
+        }
+      }
+    }
+  ],
+  "served_pick_checks": [],
+  "markdown_table": "| Row | Split | n pos (prompts) | Mean KL (nats) | 95% Bootstrap CI | Median KL | P95 KL | P99 KL | Top-1 Agree | Top-5 Overlap |\n| --- | --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |\n| Lossless trunk (331.69 GB, 3.45 bpw) | all | 2048 (20) | 0.92249 | [0.85267, 0.99073] | 0.00019 | 7.92054 | 16.59395 | 85.84% (1758/2048) | 75.65% |\n| Lossless trunk (331.69 GB, 3.45 bpw) | <= 2,048 | 1280 (20) | 0.25897 | [0.17282, 0.34246] | 0.00020 | 0.28017 | 8.61093 | 91.95% (1177/1280) | 81.34% |\n| Lossless trunk (331.69 GB, 3.45 bpw) | > 2,048 | 768 (4) | 2.02835 | [1.98485, 2.07186] | 0.00015 | 12.58814 | 19.91734 | 75.65% (581/768) | 66.17% |\n| Full quant 4b6b (300.07 GB, 3.12 bpw) | all | 2048 (20) | 0.85948 | [0.75300, 0.96741] | 0.00018 | 7.19394 | 16.57670 | 87.06% (1783/2048) | 76.11% |\n| Full quant 4b6b (300.07 GB, 3.12 bpw) | <= 2,048 | 1280 (20) | 0.31866 | [0.25971, 0.37730] | 0.00020 | 0.32317 | 10.45132 | 92.27% (1181/1280) | 81.31% |\n| Full quant 4b6b (300.07 GB, 3.12 bpw) | > 2,048 | 768 (4) | 1.76085 | [1.55225, 1.96946] | 0.00010 | 11.81076 | 19.23024 | 78.39% (602/768) | 67.45% |"
+}

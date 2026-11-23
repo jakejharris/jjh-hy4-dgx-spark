@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "label": "step2-niah-niah128k-thinkon",
+  "prompt": "~/work/max/hy4/kit/bench/prompts/niah-128k.txt",
+  "meta": {
+    "schema": 1,
+    "prompt_file": "niah-128k.txt",
+    "code": "HY4-NIAH-62UP-J4G5",
+    "seed": 20261120,
+    "needle_section": 691,
+    "total_sections": 1382,
+    "requested_depth": 0.5,
+    "actual_token_depth": 0.4969,
+    "needle_token_offset": 63597,
+    "context_window": 131072,
+    "target_tokens": 128000,
+    "raw_prompt_tokens": 127979,
+    "rendered_tokens_thinking_on": 128000,
+    "rendered_tokens_no_think": 128003,
+    "chat_template_overhead_thinking_on": 21,
+    "chat_template_overhead_no_think": 24,
+    "recommended_max_tokens_thinking_on": 2048,
+    "recommended_max_tokens_no_think": 256,
+    "headroom_thinking_on": 1024,
+    "headroom_no_think": 2813,
+    "default_thinking_mode": "on (reasoning_effort omitted)"
+  },
+  "model": "frozen-78l-dfly",
+  "reasoning_effort": "omit",
+  "thinking_mode": "on (default omit)",
+  "max_tokens": 2048,
+  "timeout_s": 3600.0,
+  "response": {
+    "http_status": 200,
+    "prompt_n": 128000,
+    "pred_n": 282,
+    "ttft_s": 317.4054,
+    "total_s": 329.4733,
+    "pp_tps": 403.27,
+    "tg_tps": 23.27,
+    "finish_reason": "stop",
+    "usage": {
+      "prompt_tokens": 128000,
+      "completion_tokens": 282,
+      "total_tokens": 128282,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 269
+      }
+    },
+    "timings": null,
+    "tensorfold": {
+      "enable_thinking": true,
+      "reasoning_effort": null,
+      "engine": "lanes",
+      "tokens_per_second": 23.27448926074584,
+      "seconds": 12.073304675,
+      "prefill_seconds": 317.196105048,
+      "prefill_widths": [],
+      "prefill_raised": [],
+      "time_to_first_token": 317.287904785,
+      "sampling": "greedy",
+      "drafts": true,
+      "token_sha": "f1a6e55e25d7",
+      "token_sha256": "f1a6e55e25d75f981df05f415cf9d236c5a2c9221042df5089c58263d956bd60",
+      "min_rows": 4
+    },
+    "speculative": {
+      "rounds": 78,
+      "calls": 78,
+      "offered": 354,
+      "drafted": 354,
+      "accepted": 203,
+      "acceptance_rate": 0.5734463276836158,
+      "tokens_per_round": 3.6153846153846154
+    },
+    "reasoning_content": "We need answer user asks exact verification needle code recorded in Section 691. Need reply only code. Need find in huge logbook. Need ensure exact. Need locate Section 691 text. In user log, around Section 691: \"Section 691 (fabric-routing, revision 85): ... In benchmark cycle 691, node ring telemetry observed 208 GB/s effective link utilization with median queue depth 6 and 95 percent cache hit efficiency across active workers. Verification needle code recorded in Section 691: HY4-NIAH-62UP-J4G5.\"\n\nNeed answer exactly HY4-NIAH-62UP-J4G5. Need ensure no extra. Need final only code. Need maybe consider if there are other needle codes? Need based only logbook. Need exact verification needle code recorded in Section 691. It is HY4-NIAH-62UP-J4G5. Need final with only that. Need no punctuation. Need ensure no hidden trick: \"verification needle code recorded in Section 691\" maybe code in Section 691 line. Need exact case. Let's double-check from prompt: \"Verification needle code recorded in Section 691: HY4-NIAH-62UP-J4G5.\" Yes. Need final. Need not mention anything else. Done.",
+    "content": "HY4-NIAH-62UP-J4G5"
+  },
+  "score": {
+    "expected_code": "HY4-NIAH-62UP-J4G5",
+    "answer_raw": "HY4-NIAH-62UP-J4G5",
+    "answer_normalized": "HY4-NIAH-62UP-J4G5",
+    "strict_exact": true,
+    "exact_match": true,
+    "code_in_content": true,
+    "code_in_reasoning": true
+  },
+  "verdict": "PASS"
+}

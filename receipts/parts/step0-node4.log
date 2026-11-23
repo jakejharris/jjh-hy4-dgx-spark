@@ -1,0 +1,113 @@
+# node4's return, 2026-11-22 (the gate seat's step 0 after a power cut on all four Sparks at 03:18:56Z).
+# The run's own logs, unchanged except home folders written ~ and the Sparks named node1 to node4.
+# Item 1: the kit's tool and manifest staged from commit 8cf0c17 on node4; the drafter folder copied node2 to
+# node4 over one cable with our own copy tool (not in the kit), then the in-place check on node4.
+# Item 2: launch/STAGING.md tar line 3 as written, for the drafter folder only, node1 through node2 to node4
+# (STAGE_CABLE_HOP1_IP 192.168.101.10, STAGE_CABLE_HOP2_IP 192.168.100.12), into a scratch folder tar-test in
+# place of /data/models, then the in-place check on that copy and the scratch folder removed.
+# Item 6: the in-place check again on node1, node2 and node3.
+# Items 3 and 7: tf-hy4-oracle --check-rank-pack on all four. The first pass read only stdout and logged FAIL
+# with no output line: the oracle prints its summary on stderr. The second pass (2>&1) is the result.
+## step0_run.log
+2026-11-22T03:25:25Z === ITEM 1: STAGE KIT TOOL & COPY DRAFTER-4B TO node4 ===
+node4 tool sha256:
+9134bc46ff3382628be826fa247b9745125595292773262cab3884c1fed567f5  ~/hy4/int/kit-drafter-tool/tools/drafter_folder.sh
+cc3699cb974c933de689e7ef5ef9022e12469f86de3529cf8c8ad0468159296f  ~/hy4/int/kit-drafter-tool/launch/weights.sha256
+node4 BEFORE_DF=/dev/nvme0n1p2 4031871553536 2920188473344 906842230784  77% / BEFORE_MEM=117.50 GiB
+route node2->node4: 192.168.100.12 dev enp1s0f1np1 src 192.168.100.10 uid 1000
+  node4 config.json: bytes=11537 sha=32435bb43d4b dt=0.699s (0.00 Gb/s)
+  node4 model-00245-of-00245.safetensors: bytes=6582943218 sha=01ea25e7ca48 dt=17.061s (3.09 Gb/s)
+  node4 trunk-4b/dfly_layers.safetensors: bytes=1611641976 sha=982762ebe346 dt=4.729s (2.73 Gb/s)
+  node4 trunk-4b/lm_head.safetensors: bytes=371450436 sha=a46a25b710aa dt=1.718s (1.73 Gb/s)
+  node4 trunk-4b/trunk.index.json: bytes=349115 sha=d7ae06363c99 dt=0.704s (0.00 Gb/s)
+node4 COPY_DONE bytes=8566396282 wall_s=26.744 AFTER_DF=/dev/nvme0n1p2 4031871553536 2928754913280 898275790848  77% / AFTER_MEM=117.01 GiB
+--- ITEM 1 IN-PLACE CHECK node4 (wall_s=5.395) ---
+== checking ~/hy4/int/drafter-4b in place
+OK      config.json
+OK      model-00245-of-00245.safetensors
+OK      trunk-4b/dfly_layers.safetensors
+OK      trunk-4b/lm_head.safetensors
+OK      trunk-4b/trunk.index.json
+drafter folder ~/hy4/int/drafter-4b: 5 files, 8566396282 bytes, each equal to launch/weights.sha256; set DRAFTER_DIR="~/hy4/int/drafter-4b"
+ITEM1_TOTAL_WALL_S=36.204
+
+2026-11-22T03:26:01Z === ITEM 2: STAGING TAR LINE 3 (node1 -> node2 -> node4) ===
+ITEM2_TAR_LINE3_WALL_S=14.491 (0.59 GB/s, 4.73 Gb/s)
+--- ITEM 2 IN-PLACE CHECK node4:~/hy4/int/tar-test/drafter-4b (wall_s=4.557) ---
+== checking ~/hy4/int/tar-test/drafter-4b in place
+OK      config.json
+OK      model-00245-of-00245.safetensors
+OK      trunk-4b/dfly_layers.safetensors
+OK      trunk-4b/lm_head.safetensors
+OK      trunk-4b/trunk.index.json
+drafter folder ~/hy4/int/tar-test/drafter-4b: 5 files, 8566396282 bytes, each equal to launch/weights.sha256; set DRAFTER_DIR="~/hy4/int/tar-test/drafter-4b"
+ITEM2_CLEANUP:
+tar_test_removed=yes drafter_4b_intact=yes
+/dev/nvme0n1p2 4031871553536 2928754921472 898275782656  77% /
+
+2026-11-22T03:26:22Z === ITEM 6: IN-PLACE DRAFTER-4B CHECK ON node1, node2, node3 ===
+--- ITEM 6 CHECK node1 (wall_s=4.275) ---
+== checking ~/hy4/int/drafter-4b in place
+OK      config.json
+OK      model-00245-of-00245.safetensors
+OK      trunk-4b/dfly_layers.safetensors
+OK      trunk-4b/lm_head.safetensors
+OK      trunk-4b/trunk.index.json
+drafter folder ~/hy4/int/drafter-4b: 5 files, 8566396282 bytes, each equal to launch/weights.sha256; set DRAFTER_DIR="~/hy4/int/drafter-4b"
+--- ITEM 6 CHECK node2 (wall_s=5.360) ---
+== checking ~/hy4/int/drafter-4b in place
+OK      config.json
+OK      model-00245-of-00245.safetensors
+OK      trunk-4b/dfly_layers.safetensors
+OK      trunk-4b/lm_head.safetensors
+OK      trunk-4b/trunk.index.json
+drafter folder ~/hy4/int/drafter-4b: 5 files, 8566396282 bytes, each equal to launch/weights.sha256; set DRAFTER_DIR="~/hy4/int/drafter-4b"
+--- ITEM 6 CHECK node3 (wall_s=5.485) ---
+== checking ~/hy4/int/drafter-4b in place
+OK      config.json
+OK      model-00245-of-00245.safetensors
+OK      trunk-4b/dfly_layers.safetensors
+OK      trunk-4b/lm_head.safetensors
+OK      trunk-4b/trunk.index.json
+drafter folder ~/hy4/int/drafter-4b: 5 files, 8566396282 bytes, each equal to launch/weights.sha256; set DRAFTER_DIR="~/hy4/int/drafter-4b"
+ITEM6_WALL_S=5.489
+
+2026-11-22T03:26:28Z === ITEMS 3 & 7: RANK PARTS HASH CHECK ON ALL FOUR SPARKS (NATIVE ORACLE, NO CONTAINER) ===
+--- PARTS CHECK node1 (FAIL, wall_s=72.755, dirs=['common', 'rank0'], exp=['common', 'rank0']) ---
+
+--- PARTS CHECK node2 (FAIL, wall_s=68.140, dirs=['common', 'rank1'], exp=['common', 'rank1']) ---
+
+--- PARTS CHECK node4 (FAIL, wall_s=63.963, dirs=['common', 'rank2'], exp=['common', 'rank2']) ---
+
+--- PARTS CHECK node3 (FAIL, wall_s=70.398, dirs=['common', 'rank3'], exp=['common', 'rank3']) ---
+
+ITEMS3_7_WALL_S=72.756 PARTS_FAIL=1
+Traceback (most recent call last):
+  File "<stdin>", line 157, in <module>
+RuntimeError: Parts check failed on one or more Sparks
+## items3_7_4.log
+2026-11-22T03:27:57Z === ITEMS 3 & 7: RANK PARTS HASH CHECK (2>&1) ON ALL FOUR SPARKS ===
+--- PARTS CHECK node1 (PASS, rc=0, wall_s=69.651, dirs=['common', 'rank0']) ---
+hy4 pack check ~/hy4/int/parts-78l-4b6b: files=473 bytes=79706444762 tensors_compared=0 failures=0
+--- PARTS CHECK node2 (PASS, rc=0, wall_s=74.999, dirs=['common', 'rank1']) ---
+hy4 pack check ~/hy4/int/parts-78l-4b6b: files=473 bytes=79706444762 tensors_compared=0 failures=0
+--- PARTS CHECK node4 (PASS, rc=0, wall_s=63.738, dirs=['common', 'rank2']) ---
+hy4 pack check ~/hy4/int/parts-78l-4b6b: files=473 bytes=79706444762 tensors_compared=0 failures=0
+--- PARTS CHECK node3 (PASS, rc=0, wall_s=72.942, dirs=['common', 'rank3']) ---
+hy4 pack check ~/hy4/int/parts-78l-4b6b: files=473 bytes=79706444762 tensors_compared=0 failures=0
+ITEMS3_7_WALL_S=75.002 PARTS_FAIL=0
+
+2026-11-22T03:29:12Z === ITEM 4: FINAL READBACK ON ALL FOUR SPARKS ===
+  node1 (rc=0): utc=2026-11-22T03:29:12Z host=node1 mem_gib= docker=0 df_avail_b=879002157056
+awk: cmd. line:1: /^MemAvailable:/ {printf %.2f, $2/1048576}
+awk: cmd. line:1:                          ^ syntax error
+  node2 (rc=0): utc=2026-11-22T03:29:13Z host=node2 mem_gib= docker=0 df_avail_b=815138230272
+awk: cmd. line:1: /^MemAvailable:/ {printf %.2f, $2/1048576}
+awk: cmd. line:1:                          ^ syntax error
+  node4 (rc=0): utc=2026-11-22T03:29:13Z host=node4 mem_gib= docker=0 df_avail_b=898275774464
+awk: cmd. line:1: /^MemAvailable:/ {printf %.2f, $2/1048576}
+awk: cmd. line:1:                          ^ syntax error
+  node3 (rc=0): utc=2026-11-22T03:29:14Z host=node3 mem_gib= docker=0 df_avail_b=170398916608
+awk: cmd. line:1: /^MemAvailable:/ {printf %.2f, $2/1048576}
+awk: cmd. line:1:                          ^ syntax error
+2026-11-22T03:29:14Z === DONE fail=0 ===

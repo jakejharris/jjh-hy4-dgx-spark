@@ -1,0 +1,497 @@
+{
+  "decode": {
+    "code": {
+      "completion_gate": {
+        "passed": 0,
+        "total": 1
+      },
+      "decode_tokens_per_second": {
+        "maximum": 30.14,
+        "median": 30.14,
+        "minimum": 30.14,
+        "p90": 30.14
+      },
+      "pooled_decode_tokens_per_second": 30.14,
+      "runs": [
+        {
+          "cached_prompt_tokens": 0,
+          "completion_tokens": 64,
+          "completion_validation": {
+            "error": "non-normal finish reason: 'length'",
+            "valid": false
+          },
+          "decode_seconds": 2.090237,
+          "decode_tokens_per_second": 30.14,
+          "finish_reason": "length",
+          "measured_sse_events": 22,
+          "output": "```go\n// ratelimit.go\npackage ratelimit\n\nimport (\n\t\"errors\"\n\t\"sync\"\n\t\"time\"\n)\n\n// Clock supplies the current time. It is injectable for deterministic tests.\ntype Clock interface {\n\tNow() time.Time\n}\n\ntype systemClock struct{}\n\nfunc (system",
+          "output_characters": 239,
+          "output_sha256": "a12f41ca102c63010b47dd17f256a137a9b3bc27838a8ee00fa75a6d7d38e921",
+          "prompt_tokens": 143,
+          "reasoning_characters": 0,
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "response_tail_seconds": 7.3e-05,
+          "run": 1,
+          "stream_done_marker": true,
+          "stream_sha256": "a12f41ca102c63010b47dd17f256a137a9b3bc27838a8ee00fa75a6d7d38e921",
+          "time_to_first_visible_seconds": 1.550444,
+          "time_to_last_output_seconds": 3.640681,
+          "ttft_seconds": 1.550444,
+          "wall_seconds": 3.640754
+        }
+      ],
+      "time_to_last_output_seconds": {
+        "maximum": 3.641,
+        "median": 3.641,
+        "minimum": 3.641,
+        "p90": 3.641
+      },
+      "ttft_seconds": {
+        "maximum": 1.55,
+        "median": 1.55,
+        "minimum": 1.55,
+        "p90": 1.55
+      },
+      "wall_seconds": {
+        "maximum": 3.641,
+        "median": 3.641,
+        "minimum": 3.641,
+        "p90": 3.641
+      }
+    },
+    "prose": {
+      "completion_gate": {
+        "passed": 0,
+        "total": 1
+      },
+      "decode_tokens_per_second": {
+        "maximum": 25.933,
+        "median": 25.933,
+        "minimum": 25.933,
+        "p90": 25.933
+      },
+      "pooled_decode_tokens_per_second": 25.933,
+      "runs": [
+        {
+          "cached_prompt_tokens": 0,
+          "completion_tokens": 64,
+          "completion_validation": {
+            "error": "non-normal finish reason: 'length'",
+            "valid": false
+          },
+          "decode_seconds": 2.429313,
+          "decode_tokens_per_second": 25.933,
+          "finish_reason": "length",
+          "measured_sse_events": 27,
+          "output": "**Internal Engineering Memo**\n\n**To:** Platform and Applied AI Teams  \n**From:** Engineering Strategy  \n**Subject:** Local AI Capacity: Buy More Hardware or Use What We Have Better  \n**Date:** 2026-06-17  \n\nWe need to make a near-term decision about local AI capacity",
+          "output_characters": 267,
+          "output_sha256": "7caa1878c3ff6cf8841be7704f8dce7d52cc432d8392385445dd19b4a56278bd",
+          "prompt_tokens": 132,
+          "reasoning_characters": 0,
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "response_tail_seconds": 7.6e-05,
+          "run": 1,
+          "stream_done_marker": true,
+          "stream_sha256": "7caa1878c3ff6cf8841be7704f8dce7d52cc432d8392385445dd19b4a56278bd",
+          "time_to_first_visible_seconds": 0.828345,
+          "time_to_last_output_seconds": 3.257658,
+          "ttft_seconds": 0.828345,
+          "wall_seconds": 3.257734
+        }
+      ],
+      "time_to_last_output_seconds": {
+        "maximum": 3.258,
+        "median": 3.258,
+        "minimum": 3.258,
+        "p90": 3.258
+      },
+      "ttft_seconds": {
+        "maximum": 0.828,
+        "median": 0.828,
+        "minimum": 0.828,
+        "p90": 0.828
+      },
+      "wall_seconds": {
+        "maximum": 3.258,
+        "median": 3.258,
+        "minimum": 3.258,
+        "p90": 3.258
+      }
+    },
+    "structured": {
+      "completion_gate": {
+        "passed": 0,
+        "total": 1
+      },
+      "decode_tokens_per_second": {
+        "maximum": 51.406,
+        "median": 51.406,
+        "minimum": 51.406,
+        "p90": 51.406
+      },
+      "pooled_decode_tokens_per_second": 51.406,
+      "runs": [
+        {
+          "cached_prompt_tokens": 0,
+          "completion_tokens": 64,
+          "completion_validation": {
+            "error": "non-normal finish reason: 'length'",
+            "valid": false
+          },
+          "decode_seconds": 1.225546,
+          "decode_tokens_per_second": 51.406,
+          "finish_reason": "length",
+          "measured_sse_events": 12,
+          "output": "[{\"index\":1,\"square\":1},{\"index\":2,\"square\":4},{\"index\":3,\"square\":9},{\"index\":4,\"square\":16},{\"index\":5,\"square\":25},{\"index\":6,\"square\":36},{\"index\":7,\"square\":49},{\"index\":8,\"square\":",
+          "output_characters": 186,
+          "output_sha256": "3301b51e8d1c56db487559de028da618f88f1bf78981e16534135a8ee0f054f9",
+          "prompt_tokens": 118,
+          "reasoning_characters": 0,
+          "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "response_tail_seconds": 8.9e-05,
+          "run": 1,
+          "stream_done_marker": true,
+          "stream_sha256": "3301b51e8d1c56db487559de028da618f88f1bf78981e16534135a8ee0f054f9",
+          "time_to_first_visible_seconds": 0.765525,
+          "time_to_last_output_seconds": 1.991071,
+          "ttft_seconds": 0.765525,
+          "wall_seconds": 1.99116
+        }
+      ],
+      "time_to_last_output_seconds": {
+        "maximum": 1.991,
+        "median": 1.991,
+        "minimum": 1.991,
+        "p90": 1.991
+      },
+      "ttft_seconds": {
+        "maximum": 0.766,
+        "median": 0.766,
+        "minimum": 0.766,
+        "p90": 0.766
+      },
+      "wall_seconds": {
+        "maximum": 1.991,
+        "median": 1.991,
+        "minimum": 1.991,
+        "p90": 1.991
+      }
+    }
+  },
+  "prefill": {
+    "32768": {
+      "cold": {
+        "effective_prefill_tokens_per_second": {
+          "maximum": 491.15,
+          "median": 491.15,
+          "minimum": 491.15,
+          "p90": 491.15
+        },
+        "runs": [
+          {
+            "cache_salt_sha256": "cbb55df36163eb0e46a39ea42f50bd55db58a625ec6a29dfc47828ad01c84bef",
+            "cached_prompt_tokens": 0,
+            "completion_tokens": 8,
+            "decode_seconds": 0.219045,
+            "decode_tokens_per_second": 31.957,
+            "effective_prefill_tokens_per_second": 491.15,
+            "finish_reason": "length",
+            "measured_sse_events": 3,
+            "output": " repository contains a service, tests, documentation",
+            "output_characters": 52,
+            "output_sha256": "a8872e509e80818cffa1a80a96832f9841d99cdc2262bfe7a1b9fb45a547e12c",
+            "prompt_tokens": 32768,
+            "reasoning_characters": 0,
+            "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "requested_prompt_tokens": 32768,
+            "response_tail_seconds": 0.00016,
+            "run": 1,
+            "stream_done_marker": true,
+            "stream_sha256": "a8872e509e80818cffa1a80a96832f9841d99cdc2262bfe7a1b9fb45a547e12c",
+            "time_to_first_visible_seconds": 66.716885,
+            "time_to_last_output_seconds": 66.935931,
+            "ttft_seconds": 66.716885,
+            "wall_seconds": 66.93609
+          }
+        ],
+        "ttft_seconds": {
+          "maximum": 66.717,
+          "median": 66.717,
+          "minimum": 66.717,
+          "p90": 66.717
+        }
+      },
+      "warm_replay": {
+        "effective_prefill_tokens_per_second": {
+          "maximum": 490.71,
+          "median": 490.71,
+          "minimum": 490.71,
+          "p90": 490.71
+        },
+        "runs": [
+          {
+            "cache_salt_sha256": "cbb55df36163eb0e46a39ea42f50bd55db58a625ec6a29dfc47828ad01c84bef",
+            "cached_prompt_tokens": 0,
+            "completion_tokens": 8,
+            "decode_seconds": 0.2189,
+            "decode_tokens_per_second": 31.978,
+            "effective_prefill_tokens_per_second": 490.71,
+            "finish_reason": "length",
+            "measured_sse_events": 3,
+            "output": " repository contains a service, tests, documentation",
+            "output_characters": 52,
+            "output_sha256": "a8872e509e80818cffa1a80a96832f9841d99cdc2262bfe7a1b9fb45a547e12c",
+            "prompt_tokens": 32768,
+            "reasoning_characters": 0,
+            "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "requested_prompt_tokens": 32768,
+            "response_tail_seconds": 0.000131,
+            "run": 1,
+            "stream_done_marker": true,
+            "stream_sha256": "a8872e509e80818cffa1a80a96832f9841d99cdc2262bfe7a1b9fb45a547e12c",
+            "time_to_first_visible_seconds": 66.776779,
+            "time_to_last_output_seconds": 66.995679,
+            "ttft_seconds": 66.776779,
+            "wall_seconds": 66.99581
+          }
+        ],
+        "ttft_seconds": {
+          "maximum": 66.777,
+          "median": 66.777,
+          "minimum": 66.777,
+          "p90": 66.777
+        }
+      }
+    },
+    "65536": {
+      "cold": {
+        "effective_prefill_tokens_per_second": {
+          "maximum": 462.406,
+          "median": 462.406,
+          "minimum": 462.406,
+          "p90": 462.406
+        },
+        "runs": [
+          {
+            "cache_salt_sha256": "2d6c7e5a42c1ce060a7199a5df02a76e972ce2422f7c225b36068332a286b5bd",
+            "cached_prompt_tokens": 0,
+            "completion_tokens": 8,
+            "decode_seconds": 0.227705,
+            "decode_tokens_per_second": 30.742,
+            "effective_prefill_tokens_per_second": 462.406,
+            "finish_reason": "length",
+            "measured_sse_events": 3,
+            "output": " repository contains a service, tests, documentation",
+            "output_characters": 52,
+            "output_sha256": "a8872e509e80818cffa1a80a96832f9841d99cdc2262bfe7a1b9fb45a547e12c",
+            "prompt_tokens": 65536,
+            "reasoning_characters": 0,
+            "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "requested_prompt_tokens": 65536,
+            "response_tail_seconds": 6.8e-05,
+            "run": 1,
+            "stream_done_marker": true,
+            "stream_sha256": "a8872e509e80818cffa1a80a96832f9841d99cdc2262bfe7a1b9fb45a547e12c",
+            "time_to_first_visible_seconds": 141.728347,
+            "time_to_last_output_seconds": 141.956052,
+            "ttft_seconds": 141.728347,
+            "wall_seconds": 141.956121
+          }
+        ],
+        "ttft_seconds": {
+          "maximum": 141.728,
+          "median": 141.728,
+          "minimum": 141.728,
+          "p90": 141.728
+        }
+      },
+      "warm_replay": {
+        "effective_prefill_tokens_per_second": {
+          "maximum": 462.513,
+          "median": 462.513,
+          "minimum": 462.513,
+          "p90": 462.513
+        },
+        "runs": [
+          {
+            "cache_salt_sha256": "2d6c7e5a42c1ce060a7199a5df02a76e972ce2422f7c225b36068332a286b5bd",
+            "cached_prompt_tokens": 0,
+            "completion_tokens": 8,
+            "decode_seconds": 0.225653,
+            "decode_tokens_per_second": 31.021,
+            "effective_prefill_tokens_per_second": 462.513,
+            "finish_reason": "length",
+            "measured_sse_events": 3,
+            "output": " repository contains a service, tests, documentation",
+            "output_characters": 52,
+            "output_sha256": "a8872e509e80818cffa1a80a96832f9841d99cdc2262bfe7a1b9fb45a547e12c",
+            "prompt_tokens": 65536,
+            "reasoning_characters": 0,
+            "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "requested_prompt_tokens": 65536,
+            "response_tail_seconds": 0.000107,
+            "run": 1,
+            "stream_done_marker": true,
+            "stream_sha256": "a8872e509e80818cffa1a80a96832f9841d99cdc2262bfe7a1b9fb45a547e12c",
+            "time_to_first_visible_seconds": 141.695427,
+            "time_to_last_output_seconds": 141.92108,
+            "ttft_seconds": 141.695427,
+            "wall_seconds": 141.921187
+          }
+        ],
+        "ttft_seconds": {
+          "maximum": 141.695,
+          "median": 141.695,
+          "minimum": 141.695,
+          "p90": 141.695
+        }
+      }
+    },
+    "8192": {
+      "cold": {
+        "effective_prefill_tokens_per_second": {
+          "maximum": 519.296,
+          "median": 519.296,
+          "minimum": 519.296,
+          "p90": 519.296
+        },
+        "runs": [
+          {
+            "cache_salt_sha256": "64897ed2c3a8fa5210a4653084c5b0357700215be27e5e5449a0d6792836b761",
+            "cached_prompt_tokens": 0,
+            "completion_tokens": 8,
+            "decode_seconds": 0.207488,
+            "decode_tokens_per_second": 33.737,
+            "effective_prefill_tokens_per_second": 519.296,
+            "finish_reason": "length",
+            "measured_sse_events": 3,
+            "output": " evidence, constraints, and the next action",
+            "output_characters": 43,
+            "output_sha256": "8e3f2e62aa1aa8b8a9338c5a37dadb78449ad33a44308ac04b7508596128b638",
+            "prompt_tokens": 8192,
+            "reasoning_characters": 0,
+            "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "requested_prompt_tokens": 8192,
+            "response_tail_seconds": 8.6e-05,
+            "run": 1,
+            "stream_done_marker": true,
+            "stream_sha256": "8e3f2e62aa1aa8b8a9338c5a37dadb78449ad33a44308ac04b7508596128b638",
+            "time_to_first_visible_seconds": 15.775208,
+            "time_to_last_output_seconds": 15.982697,
+            "ttft_seconds": 15.775208,
+            "wall_seconds": 15.982782
+          }
+        ],
+        "ttft_seconds": {
+          "maximum": 15.775,
+          "median": 15.775,
+          "minimum": 15.775,
+          "p90": 15.775
+        }
+      },
+      "warm_replay": {
+        "effective_prefill_tokens_per_second": {
+          "maximum": 519.419,
+          "median": 519.419,
+          "minimum": 519.419,
+          "p90": 519.419
+        },
+        "runs": [
+          {
+            "cache_salt_sha256": "64897ed2c3a8fa5210a4653084c5b0357700215be27e5e5449a0d6792836b761",
+            "cached_prompt_tokens": 0,
+            "completion_tokens": 8,
+            "decode_seconds": 0.214684,
+            "decode_tokens_per_second": 32.606,
+            "effective_prefill_tokens_per_second": 519.419,
+            "finish_reason": "length",
+            "measured_sse_events": 3,
+            "output": " evidence, constraints, and the next action",
+            "output_characters": 43,
+            "output_sha256": "8e3f2e62aa1aa8b8a9338c5a37dadb78449ad33a44308ac04b7508596128b638",
+            "prompt_tokens": 8192,
+            "reasoning_characters": 0,
+            "reasoning_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "requested_prompt_tokens": 8192,
+            "response_tail_seconds": 0.000114,
+            "run": 1,
+            "stream_done_marker": true,
+            "stream_sha256": "8e3f2e62aa1aa8b8a9338c5a37dadb78449ad33a44308ac04b7508596128b638",
+            "time_to_first_visible_seconds": 15.771466,
+            "time_to_last_output_seconds": 15.98615,
+            "ttft_seconds": 15.771466,
+            "wall_seconds": 15.986264
+          }
+        ],
+        "ttft_seconds": {
+          "maximum": 15.771,
+          "median": 15.771,
+          "minimum": 15.771,
+          "p90": 15.771
+        }
+      }
+    }
+  },
+  "protocol": {
+    "prompts_sha256": "0c3ac4015813af6a1b967659bd2289990fde895a5e43ae065b894d1e1f909ecb",
+    "prompts_version": "1.0.0",
+    "repository_dirty": false,
+    "repository_revision": "68800bf29cf1f85f834affdf81fe3e8703327342",
+    "repository_source": "git-worktree",
+    "repository_source_sha256": "1d09e8333c55c1337a3afc61124234e1b02e9e48a6772dc708b48fa5ca2b5dfe",
+    "version": "1.3.0"
+  },
+  "run": {
+    "appliance": {
+      "chat_template_sha256": "11b12531403da5726b7e1f6003f479043b05999e6746d39af949cbcdfd715c35",
+      "competing_traffic": "none checked at start (passive host telemetry capture only during window)",
+      "config_sha256": "32435bb43d4ba796eec605622fa96a7516960da6600493c18b209b5fd14c9f3d",
+      "context_limit": 131072,
+      "drafter": "DFly2 4-bit EXL3 (4-bit drafter body and proposal head, adaptive row-cost depth up to 6, greedy exact verification, repeat_stable=on)",
+      "gpu_clocks": "graphics clock capped at 2,200 MHz on all four (one nvidia-smi clocks.gr snapshot per rank at launch and at ready in launch_meta.json; not a trace)",
+      "hardware": "4x NVIDIA DGX Spark (GB10, 121.7 GiB unified memory each, 0 swap, graphics clocks capped at 2,200 MHz by the owner)",
+      "kernel_version": "6.17.0-1031-nvidia",
+      "kv_cache_dtype": "BF16",
+      "model": "tencent/Hy4",
+      "model_revision": "c10c0de5b6f850703fb0a90e65d1c32b558b9167",
+      "negotiated_link_speed": "200 Gb/s per port (two direct ports per node)",
+      "quantisation": "EXL3 mul1: 3.00 bpw routed experts, 4b6b trunk (4-bit with 6-bit o_proj and kv_a; L75-76 shared down BF16); FP32 lm_head; BF16 activations",
+      "scheduler": "max parallel streams 1 (FIFO queue for concurrent requests); no cross-request KV prefix cache; repeat_stable=on; row-cost table v1:56.74,v2:68.72,v3:78.15,v4:86.81,v5:95.48,v6:104.15,v7:112.81,d:6.44,e:0.41",
+      "serving_engine": "TensorFold 2cee7d9 + Hy4 port patch cut from hy4-next ef8ebb7c87aa81ff4afe4bb43bb38d05f5dd4e4e (release build, stripped); TF_HY4_FAST_PREFILL=1, TF_HY4_PREFILL_AR=bf16 (opt-in), prefill only",
+      "serving_image": "nvcr.io/nvidia/pytorch@sha256:2140e699b3beaf7f96a0081fd9c9406bc3832b435cdb60dfa2d261f7d2f34a1c",
+      "thinking_mode": "thinking off via per-request reasoning_effort=no_think",
+      "topology": "TP4, 4 ranks on a switchless direct-link 200 Gb/s RoCE ring",
+      "transport": "Direct RoCE relay (TF_TP_ROCE_RELAY=1) over two 200 Gb/s ports per node; NCCL 2.30.7 IB",
+      "weights_index_sha256": "0e213bea8877f2a9985194231b9c2d60ddd4ac7965ca00e84038f3cda08d8725"
+    },
+    "comparison_id": "2026-11-22-hy4-release-2200mhz",
+    "finished_at": "2026-11-22T22:59:18.214981+00:00",
+    "label": "hy4-st-release-bf16",
+    "model": "frozen-78l-dfly",
+    "platform": "Linux-6.17.0-1031-nvidia-aarch64-with-glibc2.39",
+    "python": "3.12.3",
+    "started_at": "2026-11-22T22:51:39.531137+00:00"
+  },
+  "schema": 1,
+  "settings": {
+    "concurrency": [],
+    "concurrency_runs": 3,
+    "concurrency_tokens": 256,
+    "concurrency_workload": "code",
+    "decode_tokens": 64,
+    "extra_body": {
+      "reasoning_effort": "no_think"
+    },
+    "prefill_cache_isolation": "random-salt-per-pair",
+    "prefill_depths": [
+      8192,
+      32768,
+      65536
+    ],
+    "prefill_runs": 1,
+    "runs": 1,
+    "seed": 20260905,
+    "temperature": 0.0,
+    "top_p": 1.0
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "utc": "2026-11-22T23:40:43Z",
+  "reference": {
+    "path": "~/work/max/strikes/hy4-sparks-20261120/run/kl-panel/results/panel1_lossless_logits.safetensors",
+    "sha256": "239cc4327ed4223db26e351d76d2793d605678866a68b319e53c4692d1d20a35",
+    "shape": [
+      2048,
+      120832
+    ],
+    "metadata": {
+      "format": "pt",
+      "panel_spec_sha256": "1f0cd24ce9f959b6c260c83d6ec4a33ae866215bf745c4bb7fab0374995bf351",
+      "picks_sha256": "48920519fe63304726eb057ee05a07d074e7a474751ae0453faf8b25d987f1fa",
+      "trunk_tag": ""
+    }
+  },
+  "matched_subset_path": null,
+  "bootstrap_draws": 1000,
+  "seed": 20261120,
+  "rows": [
+    {
+      "label": "Full quant 4b6b vs Lossless (same TP4)",
+      "path": "~/work/max/strikes/hy4-sparks-20261120/run/kl-panel/results/panel1_4b6b_logits.safetensors",
+      "sha256": "1d5062a59347a9df86fbf0130d00d000719986334899cf171e1ff3b12a85d188",
+      "metadata": {
+        "format": "pt",
+        "panel_spec_sha256": "1f0cd24ce9f959b6c260c83d6ec4a33ae866215bf745c4bb7fab0374995bf351",
+        "picks_sha256": "3ecd4b3e6b5dee5914b13e0fdcbfeacfea4f9ab18f9ac7cb903a38f80711d92d",
+        "trunk_tag": "recipe:trunk-4b,o_proj=trunk-6b,kv_a=trunk-6b"
+      },
+      "vocab_size": 120832,
+      "splits": {
+        "all": {
+          "n_positions": 2048,
+          "n_prompts": 20,
+          "kl_mean": 0.9067078546849228,
+          "kl_ci95": [
+            0.8379645012247139,
+            0.9731295219776089
+          ],
+          "kl_median": 9.773664729558561e-05,
+          "kl_p95": 7.55924335989485,
+          "kl_p99": 17.817649740154916,
+          "kl_max": 23.95404375008087,
+          "top1_matched": 1800,
+          "top1_pct": 87.890625,
+          "top5_overlap_pct": 79.19921875,
+          "ref_top1_in_cand_top5_pct": 93.408203125,
+          "bootstrap_mode": "prompt_stratified_numpy"
+        },
+        "unpruned_le2048": {
+          "n_positions": 1280,
+          "n_prompts": 20,
+          "kl_mean": 0.2865890815980141,
+          "kl_ci95": [
+            0.22528074191170533,
+            0.3500345875964955
+          ],
+          "kl_median": 9.037972258454458e-05,
+          "kl_p95": 0.1690074220410955,
+          "kl_p99": 10.162097550093522,
+          "kl_max": 20.929934356281407,
+          "top1_matched": 1202,
+          "top1_pct": 93.90625,
+          "top5_overlap_pct": 85.53124999999999,
+          "ref_top1_in_cand_top5_pct": 97.890625,
+          "bootstrap_mode": "prompt_stratified_numpy"
+        },
+        "pruned_gt2048": {
+          "n_positions": 768,
+          "n_prompts": 4,
+          "kl_mean": 1.9402391431631039,
+          "kl_ci95": [
+            1.8267849639986062,
+            2.053693322327602
+          ],
+          "kl_median": 0.00011395741534703138,
+          "kl_p95": 13.07621045710246,
+          "kl_p99": 19.744199986429695,
+          "kl_max": 23.95404375008087,
+          "top1_matched": 598,
+          "top1_pct": 77.86458333333334,
+          "top5_overlap_pct": 68.64583333333334,
+          "ref_top1_in_cand_top5_pct": 85.9375,
+          "bootstrap_mode": "prompt_stratified_numpy"
+        }
+      }
+    }
+  ],
+  "served_pick_checks": [],
+  "markdown_table": "| Row | Split | n pos (prompts) | Mean KL (nats) | 95% Bootstrap CI | Median KL | P95 KL | P99 KL | Top-1 Agree | Top-5 Overlap |\n| --- | --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |\n| Full quant 4b6b vs Lossless (same TP4) | all | 2048 (20) | 0.90671 | [0.83796, 0.97313] | 0.00010 | 7.55924 | 17.81765 | 87.89% (1800/2048) | 79.20% |\n| Full quant 4b6b vs Lossless (same TP4) | <= 2,048 | 1280 (20) | 0.28659 | [0.22528, 0.35003] | 0.00009 | 0.16901 | 10.16210 | 93.91% (1202/1280) | 85.53% |\n| Full quant 4b6b vs Lossless (same TP4) | > 2,048 | 768 (4) | 1.94024 | [1.82678, 2.05369] | 0.00011 | 13.07621 | 19.74420 | 77.86% (598/768) | 68.65% |"
+}

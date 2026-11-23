@@ -1,0 +1,28 @@
+target=128 rep=1 prompt_tokens=113 cached=0 ttft_s=0.772 wall_s=0.966 err=None
+target=128 rep=2 prompt_tokens=128 cached=0 ttft_s=0.827 wall_s=0.992 err=None
+target=128 rep=3 prompt_tokens=129 cached=0 ttft_s=0.839 wall_s=0.971 err=None
+target=256 rep=1 prompt_tokens=247 cached=0 ttft_s=1.429 wall_s=1.515 err=None
+target=256 rep=2 prompt_tokens=245 cached=0 ttft_s=1.397 wall_s=1.494 err=None
+target=256 rep=3 prompt_tokens=253 cached=0 ttft_s=1.617 wall_s=1.661 err=None
+target=300 rep=1 prompt_tokens=302 cached=0 ttft_s=1.024 wall_s=1.03 err=None
+target=300 rep=2 prompt_tokens=303 cached=0 ttft_s=0.901 wall_s=1.038 err=None
+target=300 rep=3 prompt_tokens=308 cached=0 ttft_s=1.111 wall_s=1.191 err=None
+target=512 rep=1 prompt_tokens=488 cached=0 ttft_s=1.326 wall_s=1.329 err=None
+target=512 rep=2 prompt_tokens=517 cached=0 ttft_s=1.261 wall_s=1.411 err=None
+target=512 rep=3 prompt_tokens=509 cached=0 ttft_s=1.243 wall_s=1.422 err=None
+target=1024 rep=1 prompt_tokens=1010 cached=0 ttft_s=2.124 wall_s=2.227 err=None
+target=1024 rep=2 prompt_tokens=1017 cached=0 ttft_s=2.144 wall_s=2.255 err=None
+target=1024 rep=3 prompt_tokens=1022 cached=0 ttft_s=2.137 wall_s=2.243 err=None
+target=2048 rep=1 prompt_tokens=2047 cached=0 ttft_s=4.206 wall_s=4.318 err=None
+target=2048 rep=2 prompt_tokens=2043 cached=0 ttft_s=4.215 wall_s=4.317 err=None
+target=2048 rep=3 prompt_tokens=2043 cached=0 ttft_s=4.205 wall_s=4.318 err=None
+target=4096 rep=1 prompt_tokens=4109 cached=0 ttft_s=8.994 wall_s=9.102 err=None
+target=4096 rep=2 prompt_tokens=4090 cached=0 ttft_s=8.833 wall_s=8.944 err=None
+target=4096 rep=3 prompt_tokens=4101 cached=0 ttft_s=8.868 wall_s=8.973 err=None
+SIZE 128: n=3 prompt_tokens=[113, 128, 129] ttft median=0.827 s (min 0.772, max 0.839)
+SIZE 256: n=3 prompt_tokens=[245, 247, 253] ttft median=1.429 s (min 1.397, max 1.617)
+SIZE 300: n=3 prompt_tokens=[302, 303, 308] ttft median=1.024 s (min 0.901, max 1.111)
+SIZE 512: n=3 prompt_tokens=[488, 509, 517] ttft median=1.261 s (min 1.243, max 1.326)
+SIZE 1024: n=3 prompt_tokens=[1010, 1017, 1022] ttft median=2.137 s (min 2.124, max 2.144)
+SIZE 2048: n=3 prompt_tokens=[2043, 2043, 2047] ttft median=4.206 s (min 4.205, max 4.215)
+SIZE 4096: n=3 prompt_tokens=[4090, 4101, 4109] ttft median=8.868 s (min 8.833, max 8.994)

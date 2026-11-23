@@ -1,0 +1,14 @@
+# Hy4 EXL3 trunk quantization recipe: uniform 4-bit (k2=8, mul1, --out_scales always)
+# Includes optional 4-bit EXL3 proposal head (lm_head.safetensors) and 4-bit DFly body (dfly_layers.safetensors).
+# Change default_bits / lm_head_bits / dfly_bits in one line (supported: 3, 4, 6, 8; null or 16 = skip/lossless).
+profile: trunk-4b
+codebook: mul1
+out_scales: always
+default_bits: 4
+lm_head_bits: 4
+dfly_bits: 4
+dfly_overrides: {}
+matrices: {}
+overrides:
+  model.layers.75.mlp.shared_experts.down_proj: 16
+  model.layers.76.mlp.shared_experts.down_proj: 16

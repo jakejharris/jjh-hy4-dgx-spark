@@ -1,0 +1,17 @@
+{
+  "claim_id": "systems.load.cold.exl3",
+  "generated_utc": "2026-11-21T15:50:05Z",
+  "label": "78l-4b6b-128k-dfly4b-relay",
+  "isolation": "quiet",
+  "unit": "s",
+  "value": 79.0,
+  "serve_load_s": 80.2,
+  "max_rank_load_s": 76.12,
+  "per_rank_load_s": {
+    "0": 76.12,
+    "1": 70.15,
+    "2": 47.91,
+    "3": 68.45
+  },
+  "status": "measured"
+}

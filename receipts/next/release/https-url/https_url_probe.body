@@ -1,0 +1,1 @@
+{"error": {"message": "image URLs are off on this server; send the image as a data URL, or start the server with --vision-urls", "type": "invalid_request_error"}}

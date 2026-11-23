@@ -1,0 +1,270 @@
+{
+  "tool": "bench/vision_check.py",
+  "url": "http://127.0.0.1:18080",
+  "utc_start": "2026-11-22T22:12:38Z",
+  "model": "frozen-78l-dfly",
+  "known_answers": [
+    {
+      "id": "text_card",
+      "image": "bench/images/text_card.png",
+      "question": "Read the card. Reply with exactly these three lines and nothing else:\nCODE: <code>\nPORT: <port>\nSTATUS: <status>",
+      "expect": {
+        "CODE": "KESTREL-4729",
+        "PORT": "18080",
+        "STATUS": "READY"
+      },
+      "status": 200,
+      "answer": "CODE: KESTREL-4729\nPORT: 18080\nSTATUS: READY",
+      "prompt_tokens": 461,
+      "error": null,
+      "ttft_s": 3.089,
+      "seconds": 3.57,
+      "parsed": {
+        "CODE": "KESTREL-4729",
+        "PORT": "18080",
+        "STATUS": "READY"
+      },
+      "wrong": {},
+      "pass": true
+    },
+    {
+      "id": "color_grid",
+      "image": "bench/images/color_grid.png",
+      "question": "This image is a 2x2 grid of solid coloured squares. Reply with exactly these four lines and nothing else, one colour word each:\ntop-left: <colour>\ntop-right: <colour>\nbottom-left: <colour>\nbottom-right: <colour>",
+      "expect": {
+        "top-left": "red",
+        "top-right": "blue",
+        "bottom-left": "green",
+        "bottom-right": "yellow"
+      },
+      "status": 200,
+      "answer": "top-left: red\ntop-right: blue\nbottom-left: green\nbottom-right: yellow",
+      "prompt_tokens": 351,
+      "error": null,
+      "ttft_s": 1.854,
+      "seconds": 2.32,
+      "parsed": {
+        "top-left": "red",
+        "top-right": "blue",
+        "bottom-left": "green",
+        "bottom-right": "yellow"
+      },
+      "wrong": {},
+      "pass": true
+    },
+    {
+      "id": "bar_chart",
+      "image": "bench/images/bar_chart.png",
+      "question": "Read the bar chart. Reply with exactly these six lines and nothing else, numbers as digits and days as three letters:\nMON: <value>\nTUE: <value>\nWED: <value>\nTHU: <value>\nHIGHEST: <day>\nLOWEST: <day>",
+      "expect": {
+        "MON": "20",
+        "TUE": "75",
+        "WED": "40",
+        "THU": "90",
+        "HIGHEST": "THU",
+        "LOWEST": "MON"
+      },
+      "status": 200,
+      "answer": "MON: 20\nTUE: 75\nWED: 40\nTHU: 90\nHIGHEST: THU\nLOWEST: MON",
+      "prompt_tokens": 609,
+      "error": null,
+      "ttft_s": 2.915,
+      "seconds": 3.7,
+      "parsed": {
+        "MON": "20",
+        "TUE": "75",
+        "WED": "40",
+        "THU": "90",
+        "HIGHEST": "THU",
+        "LOWEST": "MON"
+      },
+      "wrong": {},
+      "pass": true
+    }
+  ],
+  "known_pass": 3,
+  "known_total": 3,
+  "probes": {
+    "formats": [
+      {
+        "status": 200,
+        "answer": "Multicoloured",
+        "prompt_tokens": 307,
+        "error": null,
+        "ttft_s": 1.559,
+        "seconds": 1.75,
+        "label": "png",
+        "accepted": true
+      },
+      {
+        "status": 400,
+        "answer": "",
+        "prompt_tokens": null,
+        "error": "{\"error\": {\"message\": \"image 1 is not PNG, JPEG or WebP; send one of those\", \"type\": \"invalid_request_error\"}}",
+        "ttft_s": null,
+        "seconds": 0.18,
+        "label": "bmp",
+        "accepted": false
+      },
+      {
+        "status": 200,
+        "answer": "The number 14 is in the center, with a red left half and a blue right half.",
+        "prompt_tokens": 325,
+        "error": null,
+        "ttft_s": 1.626,
+        "seconds": 2.22,
+        "label": "jpeg",
+        "accepted": true,
+        "image": "bench/images/known_74_red_blue.jpg",
+        "expect": {
+          "number": "74",
+          "first": "red",
+          "second": "blue"
+        },
+        "answered_right": false
+      },
+      {
+        "status": 200,
+        "answer": "The number is 39, the top half is green, and the bottom half is yellow.",
+        "prompt_tokens": 325,
+        "error": null,
+        "ttft_s": 1.616,
+        "seconds": 2.13,
+        "label": "webp",
+        "accepted": true,
+        "image": "bench/images/known_39_green_yellow.webp",
+        "expect": {
+          "number": "39",
+          "first": "green",
+          "second": "yellow"
+        },
+        "answered_right": true
+      }
+    ],
+    "sizes": [
+      {
+        "status": 200,
+        "answer": "Green",
+        "prompt_tokens": 1323,
+        "error": null,
+        "ttft_s": 7.06,
+        "seconds": 7.17,
+        "label": "1440x900",
+        "accepted": true
+      },
+      {
+        "status": 200,
+        "answer": "Green",
+        "prompt_tokens": 4085,
+        "error": null,
+        "ttft_s": 33.407,
+        "seconds": 33.52,
+        "label": "2880x1800",
+        "accepted": true
+      },
+      {
+        "status": 400,
+        "answer": "",
+        "prompt_tokens": null,
+        "error": "{\"error\": {\"message\": \"image 1 exceeds the limits: 10 MB encoded, 8192 pixels a side, 16 megapixels\", \"type\": \"invalid_request_error\"}}",
+        "ttft_s": null,
+        "seconds": 0.05,
+        "label": "5760x3600",
+        "accepted": false
+      },
+      {
+        "status": 400,
+        "answer": "",
+        "prompt_tokens": null,
+        "error": "{\"error\": {\"message\": \"image 1 exceeds the limits: 10 MB encoded, 8192 pixels a side, 16 megapixels\", \"type\": \"invalid_request_error\"}}",
+        "ttft_s": null,
+        "seconds": 0.08,
+        "label": "8192x8192",
+        "accepted": false
+      }
+    ],
+    "per_request": [
+      {
+        "status": 200,
+        "answer": "Multicoloured",
+        "prompt_tokens": 307,
+        "error": null,
+        "ttft_s": 1.546,
+        "seconds": 1.74,
+        "label": "1 images",
+        "accepted": true
+      },
+      {
+        "status": 200,
+        "answer": "Multicolored",
+        "prompt_tokens": 581,
+        "error": null,
+        "ttft_s": 2.639,
+        "seconds": 2.93,
+        "label": "2 images",
+        "accepted": true
+      },
+      {
+        "status": 200,
+        "answer": "Red",
+        "prompt_tokens": 1129,
+        "error": null,
+        "ttft_s": 4.984,
+        "seconds": 5.08,
+        "label": "4 images",
+        "accepted": true
+      },
+      {
+        "status": 400,
+        "answer": "",
+        "prompt_tokens": null,
+        "error": "{\"error\": {\"message\": \"a request may hold at most 4 images (--vision-max-images); it has 8\", \"type\": \"invalid_request_error\"}}",
+        "ttft_s": null,
+        "seconds": 0.14,
+        "label": "8 images",
+        "accepted": false
+      }
+    ],
+    "malformed": [
+      {
+        "status": 400,
+        "answer": "",
+        "prompt_tokens": null,
+        "error": "{\"error\": {\"message\": \"invalid image data URL encoding\", \"type\": \"invalid_request_error\"}}",
+        "ttft_s": null,
+        "seconds": 0.02,
+        "label": "bad base64",
+        "accepted": false
+      },
+      {
+        "status": 400,
+        "answer": "",
+        "prompt_tokens": null,
+        "error": "{\"error\": {\"message\": \"image 1 could not be decoded; send PNG, JPEG or WebP\", \"type\": \"invalid_request_error\"}}",
+        "ttft_s": null,
+        "seconds": 0.02,
+        "label": "truncated png",
+        "accepted": false
+      }
+    ],
+    "remote_url": [
+      {
+        "status": 400,
+        "answer": "",
+        "prompt_tokens": null,
+        "error": "{\"error\": {\"message\": \"images require data URLs or public HTTPS URLs\", \"type\": \"invalid_request_error\"}}",
+        "ttft_s": null,
+        "seconds": 0.02,
+        "label": "http url",
+        "accepted": false
+      }
+    ]
+  },
+  "alive_after": {
+    "status": 200,
+    "answer": "ready",
+    "error": null
+  },
+  "server_alive_after": true,
+  "utc_end": "2026-11-22T22:13:47Z"
+}

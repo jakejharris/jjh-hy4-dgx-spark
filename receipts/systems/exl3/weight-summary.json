@@ -1,0 +1,55 @@
+{
+  "claim_id": "serve.mem.per_rank_gib",
+  "what": "Minimum to maximum of the resident weight payload over the four ranks of the full quant's 131,072-token boot (default settings, drafter loaded), read from the four per-rank weight receipts in this folder. Each value is that rank's loader weight bytes divided by 2^30, rounded to two places.",
+  "generated_utc": "2026-11-21T23:29:39Z",
+  "inputs": [
+    {
+      "file": "receipts/systems/exl3/systems.weights.r0.exl3.json",
+      "sha256": "037a9817468bac2b385d2c87924270c964e4d30da58024a80937eee3866dffbe",
+      "claim_id": "systems.weights.r0.exl3",
+      "rank": 0,
+      "label": "78l-4b6b-128k-dfly4b-relay",
+      "generated_utc": "2026-11-21T15:50:05Z",
+      "weight_bytes": 80764690564,
+      "value": 75.22
+    },
+    {
+      "file": "receipts/systems/exl3/systems.weights.r1.exl3.json",
+      "sha256": "dab5c8fafa74c299032499324b5ad3ab66f21e85558e7b22008fc310d1d8dabd",
+      "claim_id": "systems.weights.r1.exl3",
+      "rank": 1,
+      "label": "78l-4b6b-128k-dfly4b-relay",
+      "generated_utc": "2026-11-21T15:50:05Z",
+      "weight_bytes": 80764690564,
+      "value": 75.22
+    },
+    {
+      "file": "receipts/systems/exl3/systems.weights.r2.exl3.json",
+      "sha256": "fae2df0cb0f878f431661a3d5a38233056696f77944f169fcb8297b5c68e03dc",
+      "claim_id": "systems.weights.r2.exl3",
+      "rank": 2,
+      "label": "78l-4b6b-128k-dfly4b-relay",
+      "generated_utc": "2026-11-21T15:50:05Z",
+      "weight_bytes": 80764690564,
+      "value": 75.22
+    },
+    {
+      "file": "receipts/systems/exl3/systems.weights.r3.exl3.json",
+      "sha256": "4cbf4002e1860a12055b26c9e66c59953089e51254cfc8cc0b3fcac9d12431e1",
+      "claim_id": "systems.weights.r3.exl3",
+      "rank": 3,
+      "label": "78l-4b6b-128k-dfly4b-relay",
+      "generated_utc": "2026-11-21T15:50:05Z",
+      "weight_bytes": 80764690564,
+      "value": 75.22
+    }
+  ],
+  "min_bytes": 80764690564,
+  "max_bytes": 80764690564,
+  "min_gib": 75.22,
+  "max_gib": 75.22,
+  "identical": true,
+  "unit": "GiB",
+  "value": 75.22,
+  "rule": "min to max of the four per-rank values; one value when all four are equal"
+}

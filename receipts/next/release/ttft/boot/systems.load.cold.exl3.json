@@ -1,0 +1,17 @@
+{
+  "claim_id": "systems.load.cold.exl3",
+  "generated_utc": "2026-11-23T00:11:39Z",
+  "label": "release-ttft",
+  "isolation": "quiet",
+  "unit": "s",
+  "value": 81.0,
+  "serve_load_s": 79.4,
+  "max_rank_load_s": 74.9,
+  "per_rank_load_s": {
+    "0": 71.42,
+    "1": 74.09,
+    "2": 46.08,
+    "3": 74.9
+  },
+  "status": "measured"
+}

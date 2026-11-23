@@ -1,0 +1,21 @@
+utc_precheck=2026-11-21T17:08:14Z
+mem_before_gib=116.42
+3c6f9366fe7a98b3c4a39edffb8acfc4fddf182f260b4a0decfc5c49ea2aa14e  ~/hy4/int/winB-bin/tf-hy4-oracle
+  tf-hy4-oracle --export-rank-pack SRC --out DIR [--trunk PROF] [--target-head 6b|4b|PATH] [--ranks 0,1,2,3] [--layers L,..] [--no-common] | --check-rank-pack DIR [--source SRC]
+utc_start=2026-11-21T17:08:15Z
+hy4 rank pack ~/hy4/int/parts-78l-4b6b/common: tensors=120905 bytes=4035262530
+hy4 rank pack ~/hy4/int/parts-78l-4b6b/rank0: tensors=119403 bytes=75671182232
+hy4 rank pack ~/hy4/int/parts-78l-4b6b/rank1: tensors=119403 bytes=75671182232
+hy4 rank pack ~/hy4/int/parts-78l-4b6b/rank2: tensors=119403 bytes=75671182232
+hy4 rank pack ~/hy4/int/parts-78l-4b6b/rank3: tensors=119403 bytes=75671182232
+hy4 rank pack export done in 949897 ms
+hy4 pack check ~/hy4/int/parts-78l-4b6b: files=1181 bytes=306719991458 tensors_compared=598517 failures=0
+4054555605	~/hy4/int/parts-78l-4b6b/common
+75689916292	~/hy4/int/parts-78l-4b6b/rank0
+75689916292	~/hy4/int/parts-78l-4b6b/rank1
+75689916292	~/hy4/int/parts-78l-4b6b/rank2
+75689916292	~/hy4/int/parts-78l-4b6b/rank3
+utc_end=2026-11-21T18:16:38Z
+wall_s=4102.751
+mem_after_gib=116.43
+rc=0

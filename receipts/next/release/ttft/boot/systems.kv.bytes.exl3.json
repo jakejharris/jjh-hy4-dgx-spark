@@ -1,0 +1,12 @@
+{
+  "claim_id": "systems.kv.bytes.exl3",
+  "generated_utc": "2026-11-23T00:11:39Z",
+  "label": "release-ttft",
+  "isolation": "quiet",
+  "unit": "B/token",
+  "value": 95273.0,
+  "kv_gib_per_stream": 11.63,
+  "context_window": 131072,
+  "layers": 78,
+  "status": "measured"
+}

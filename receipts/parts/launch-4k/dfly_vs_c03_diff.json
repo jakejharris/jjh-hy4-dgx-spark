@@ -1,0 +1,87 @@
+{
+  "all_equal": true,
+  "thinking_on": {
+    "equal": true,
+    "first_diff_pos": null,
+    "diff_tokens": 0,
+    "total_tokens": 256,
+    "prompts": [
+      "prose_default",
+      "code_default"
+    ]
+  },
+  "thinking_off": {
+    "equal": true,
+    "first_diff_pos": null,
+    "diff_tokens": 0,
+    "total_tokens": 128,
+    "prompts": [
+      "prose_nothink"
+    ]
+  },
+  "prompts": {
+    "prose_default": {
+      "equal": true,
+      "first_diff_pos": null,
+      "diff_tokens": 0,
+      "total_tokens": 128,
+      "plain_len": 128,
+      "draft_len": 128,
+      "thinking": "on",
+      "plain_sha256": "613cba9b3ca1f93754e8e5d5eff2fb66ab9e73235d5ef0460f966a96585545f6",
+      "cand_sha256": "613cba9b3ca1f93754e8e5d5eff2fb66ab9e73235d5ef0460f966a96585545f6",
+      "plain_tg_tps": 34.58,
+      "cand_tg_tps": 35.58,
+      "cand_speculative": {
+        "rounds": 36,
+        "offered": 162,
+        "accepted": 92,
+        "kept_per_round": 2.556,
+        "tokens_per_round": 3.5555555555555554,
+        "acceptance_rate": 0.5679012345679012
+      }
+    },
+    "prose_nothink": {
+      "equal": true,
+      "first_diff_pos": null,
+      "diff_tokens": 0,
+      "total_tokens": 128,
+      "plain_len": 128,
+      "draft_len": 128,
+      "thinking": "off",
+      "plain_sha256": "b8787c10cb85779728eb1b4617bba14e34090c59e33e5aeedcf5963970e24cc8",
+      "cand_sha256": "b8787c10cb85779728eb1b4617bba14e34090c59e33e5aeedcf5963970e24cc8",
+      "plain_tg_tps": 24.97,
+      "cand_tg_tps": 25.9,
+      "cand_speculative": {
+        "rounds": 58,
+        "offered": 155,
+        "accepted": 69,
+        "kept_per_round": 1.19,
+        "tokens_per_round": 2.206896551724138,
+        "acceptance_rate": 0.44516129032258067
+      }
+    },
+    "code_default": {
+      "equal": true,
+      "first_diff_pos": null,
+      "diff_tokens": 0,
+      "total_tokens": 128,
+      "plain_len": 128,
+      "draft_len": 128,
+      "thinking": "on",
+      "plain_sha256": "dd976eab3cab5509007796696c24cabd71d7ace92a07d5cc9166b80d46deb8c9",
+      "cand_sha256": "dd976eab3cab5509007796696c24cabd71d7ace92a07d5cc9166b80d46deb8c9",
+      "plain_tg_tps": 37.95,
+      "cand_tg_tps": 39.02,
+      "cand_speculative": {
+        "rounds": 32,
+        "offered": 152,
+        "accepted": 96,
+        "kept_per_round": 3.0,
+        "tokens_per_round": 4.0,
+        "acceptance_rate": 0.631578947368421
+      }
+    }
+  }
+}

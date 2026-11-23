@@ -1,0 +1,32 @@
+=== node1 2026-11-22T19:05:43Z ===
+MemAvailable: 23.36 GiB (24491976 kB)
+PID=3417792 Name:	docker VmSize:	 2144708 kB VmHWM:	   28904 kB VmRSS:	   28904 kB RssAnon:	    8924 kB RssFile:	   19980 kB RssShmem:	       0 kB 
+PID=3418164 Name:	tensorfold-nati VmSize:	371838992 kB VmHWM:	 7990856 kB VmRSS:	 2014468 kB RssAnon:	 1582972 kB RssFile:	  268476 kB RssShmem:	  163020 kB 
+PID=3458442 Name:	bash VmSize:	   20716 kB VmHWM:	    3320 kB VmRSS:	    3320 kB RssAnon:	     264 kB RssFile:	    3056 kB RssShmem:	       0 kB 
+PID=3458444 
+nvidia-smi compute-apps:
+3418164, 93239 MiB
+=== node2 2026-11-22T19:05:43Z ===
+MemAvailable: 26.20 GiB (27474176 kB)
+PID=3168688 Name:	docker VmSize:	 2144644 kB VmHWM:	   28532 kB VmRSS:	   28532 kB RssAnon:	    8936 kB RssFile:	   19596 kB RssShmem:	       0 kB 
+PID=3169226 Name:	tensorfold-nati VmSize:	368531720 kB VmHWM:	 7879272 kB VmRSS:	 1925980 kB RssAnon:	 1517460 kB RssFile:	  263932 kB RssShmem:	  144588 kB 
+PID=3203412 Name:	bash VmSize:	   20716 kB VmHWM:	    3320 kB VmRSS:	    3320 kB RssAnon:	     264 kB RssFile:	    3056 kB RssShmem:	       0 kB 
+PID=3203414 
+nvidia-smi compute-apps:
+3169226, 90453 MiB
+=== node4 2026-11-22T19:05:44Z ===
+MemAvailable: 25.86 GiB (27118068 kB)
+PID=3431416 Name:	docker VmSize:	 2178280 kB VmHWM:	   29168 kB VmRSS:	   29168 kB RssAnon:	    9384 kB RssFile:	   19784 kB RssShmem:	       0 kB 
+PID=3431794 Name:	tensorfold-nati VmSize:	368531724 kB VmHWM:	 7879752 kB VmRSS:	 1925992 kB RssAnon:	 1517488 kB RssFile:	  263916 kB RssShmem:	  144588 kB 
+PID=3469240 Name:	bash VmSize:	   20716 kB VmHWM:	    3328 kB VmRSS:	    3328 kB RssAnon:	     272 kB RssFile:	    3056 kB RssShmem:	       0 kB 
+PID=3469242 
+nvidia-smi compute-apps:
+3431794, 90453 MiB
+=== node3 2026-11-22T19:05:44Z ===
+MemAvailable: 26.28 GiB (27558284 kB)
+PID=2459040 Name:	docker VmSize:	 2144388 kB VmHWM:	   28964 kB VmRSS:	   28964 kB RssAnon:	    8988 kB RssFile:	   19976 kB RssShmem:	       0 kB 
+PID=2459569 Name:	tensorfold-nati VmSize:	368531732 kB VmHWM:	 7877952 kB VmRSS:	 1925868 kB RssAnon:	 1517440 kB RssFile:	  263896 kB RssShmem:	  144532 kB 
+PID=2493808 Name:	bash VmSize:	   20716 kB VmHWM:	    3320 kB VmRSS:	    3320 kB RssAnon:	     268 kB RssFile:	    3052 kB RssShmem:	       0 kB 
+PID=2493817 
+nvidia-smi compute-apps:
+2459569, 90453 MiB

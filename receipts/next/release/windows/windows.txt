@@ -1,0 +1,9 @@
+# The run log's lines for the release run's windows 1 and 2 (out/wind-progress.md, written by the run scripts).
+- 2026-11-22T20:53:37Z RIG TAKEN release-w1 (spark-parity: fresh-clone kit d3a9e0a1, engine ef8ebb7c8; starting P4 build --self-test on a Spark, P5 stage next-bin + base-bin, pre-boot checks, then Window 1 <= 55 min).
+- 2026-11-22T21:09:55Z RUN release-w1 (kit=d3a9e0a1 engine=ef8ebb7c8 defaults+vision, limit 55 min).
+- 2026-11-22T21:59:46Z DONE release-w1 (load_min=49.85 min_free_gib=21.61 niah_on_rc=0 niah_off_rc=0 check_c_rc=1 moved_to_w2='gate_mixed_fast_on W1.5').
+- 2026-11-22T21:59:46Z RIG BACK release-w1 (Window 1 complete, docker=0 on all 4 Sparks; 10 clean min before Window 2).
+- 2026-11-22T22:10:56Z RIG TAKEN release-w2 (spark-parity: Window 2 REVISED kit=07d9260 codecs=1: Boot A defaults+vision+codecs -> Boot B fastoff+vision -> Boot C bf16; decode control dropped; limit 55 min).
+- 2026-11-22T22:10:56Z RUN release-w2 (kit=07d9260 engine=ef8ebb7c8 codecs=1 limit 55 min).
+- 2026-11-22T22:59:28Z DONE release-w2 (load_min=48.53 min_free_gib=21.64 boot_c_ran=1 decode_control=dropped).
+- 2026-11-22T22:59:28Z RIG BACK release-w2 (Window 2 complete, docker=0 on all 4 Sparks).

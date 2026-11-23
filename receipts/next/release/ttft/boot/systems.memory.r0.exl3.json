@@ -1,0 +1,16 @@
+{
+  "claim_id": "systems.memory.r0.exl3",
+  "generated_utc": "2026-11-23T00:11:39Z",
+  "label": "release-ttft",
+  "isolation": "quiet",
+  "rank": 0,
+  "unit": "GiB",
+  "value": 22.53,
+  "source": "continuous_memfloor",
+  "floor_gib": 8.0,
+  "stopped": 0,
+  "min_utc": "2026-11-22T23:51:27Z",
+  "free_after_reserve_gib": 22.97,
+  "reserve_gib": 12.2,
+  "status": "measured"
+}

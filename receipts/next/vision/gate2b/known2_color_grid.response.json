@@ -1,0 +1,26 @@
+{
+  "wall_s": 7.9765,
+  "ttft_s": 1.9293,
+  "decode_s": 6.0472,
+  "prompt_tokens": 332,
+  "completion_tokens": 180,
+  "prefill_tok_s": 172.08,
+  "decode_tok_s": 29.6,
+  "finish_reason": "stop",
+  "combined_sha256": "cfa9e3dcbfe876ac0d012b2a4e7d7de90dc8fa7ccce9f2946e173b78cad4239f",
+  "usage": {
+    "prompt_tokens": 332,
+    "completion_tokens": 180,
+    "total_tokens": 512,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 151
+    }
+  },
+  "timings": {},
+  "reasoning_content": "We need answer straightforward. Need identify colors. Image 2x2: top-left red, top-right blue, bottom-left green, bottom-right yellow. Need perhaps mention exact shades? User asks name color. We can concise. Need ensure no trick with black borders/background. Positions colored squares. Answer list. Could say top-left red; top-right blue; bottom-left green; bottom-right yellow. Need perhaps note top-left appears red/crimson, top-right blue, bottom-left green, bottom-right yellow. Let's inspect: top-left RGB likely #ef3038? top-right #1686d9? bottom-left #36a54a? bottom-right #ffd42a. Generic names sufficient. Need answer only.",
+  "content": "- **Top-left:** Red  \n- **Top-right:** Blue  \n- **Bottom-left:** Green  \n- **Bottom-right:** Yellow",
+  "sse_events": 66
+}

@@ -1,0 +1,25 @@
+decode/code: 5 runs
+  1: 32.2 tok/s, TTFT 1.604s, 8192 tokens
+  2: 39.2 tok/s, TTFT 0.837s, 8192 tokens
+  3: 33.2 tok/s, TTFT 0.819s, 8192 tokens
+  4: 39.6 tok/s, TTFT 0.808s, 8192 tokens
+  5: 26.1 tok/s, TTFT 0.808s, 8192 tokens
+decode/prose: 5 runs
+Traceback (most recent call last):
+  File "~/rigmark13/source/bench.py", line 892, in <module>
+    main()
+  File "~/rigmark13/source/bench.py", line 841, in main
+    result["decode"] = run_decode(
+                       ^^^^^^^^^^^
+  File "~/rigmark13/source/bench.py", line 404, in run_decode
+    row = client.stream("/v1/chat/completions", payload)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/rigmark13/source/bench.py", line 139, in stream
+    for raw in response:
+  File "/usr/lib/python3.12/http/client.py", line 709, in readline
+    result = self.fp.readline(limit)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socket.py", line 707, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

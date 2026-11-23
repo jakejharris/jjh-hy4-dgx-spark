@@ -1,0 +1,90 @@
+{
+  "model_id": "frozen-78l-dfly",
+  "vision_bin_3shot_baseline_tok_s": 132.9,
+  "tasks": [
+    {
+      "id": "known1_text_card",
+      "prompt_tokens": 444,
+      "completion_tokens": 2048,
+      "ttft_s": 2.1916,
+      "prefill_tok_s": 202.59,
+      "decode_tok_s": 23.67,
+      "keyword_hits": {
+        "KESTREL-4729": false,
+        "18080": false,
+        "READY": false
+      },
+      "pass": false
+    },
+    {
+      "id": "known2_color_grid",
+      "prompt_tokens": 332,
+      "completion_tokens": 89,
+      "ttft_s": 1.6589,
+      "prefill_tok_s": 200.13,
+      "decode_tok_s": 32.25,
+      "keyword_hits": {
+        "red": true,
+        "blue": true,
+        "green": true,
+        "yellow": true
+      },
+      "pass": true
+    },
+    {
+      "id": "known3_bar_chart",
+      "prompt_tokens": 576,
+      "completion_tokens": 148,
+      "ttft_s": 2.7025,
+      "prefill_tok_s": 213.13,
+      "decode_tok_s": 32.73,
+      "keyword_hits": {
+        "20": true,
+        "75": true,
+        "40": true,
+        "90": true
+      },
+      "pass": true
+    },
+    {
+      "id": "v6_look_and_fix",
+      "prompt_tokens": 3951,
+      "completion_tokens": 8192,
+      "ttft_s": 24.3852,
+      "prefill_tok_s": 162.02,
+      "decode_tok_s": 20.98,
+      "keyword_hits": {
+        "voxel": false
+      },
+      "pass": false
+    },
+    {
+      "id": "cap_8192_pair_2048x2016",
+      "prompt_tokens": 8255,
+      "completion_tokens": 127,
+      "ttft_s": 70.5462,
+      "prefill_tok_s": 117.02,
+      "decode_tok_s": 25.68,
+      "keyword_hits": {
+        "red": true,
+        "blue": true,
+        "green": true,
+        "yellow": true
+      },
+      "pass": true,
+      "rank0_min_avail_gib": 21.61
+    }
+  ],
+  "codecs": {
+    "jpeg": {
+      "status": 400,
+      "message": "image 1: libturbojpeg.so.0 is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path",
+      "pass": true
+    },
+    "webp": {
+      "status": 400,
+      "message": "image 1: libwebpdecoder.so.3 is required for WebP inputs (--vision); install libwebp 1.6.0 and set TENSORFOLD_LIBWEBP to its decoder file, or put it on the documented loader path",
+      "pass": true
+    }
+  }
+}

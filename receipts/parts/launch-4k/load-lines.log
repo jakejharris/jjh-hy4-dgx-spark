@@ -1,0 +1,11 @@
+# Each rank's load line and rank 0's serving banner, from the four rank logs of the parts launch, unchanged
+# except home folders written ~ and the Sparks named node1 to node4. Rank N's file is rankN_<node>.log.
+## rank0_node1.log
+[tensorfold] serving hy4-exl3 at http://0.0.0.0:18080/v1 (sampling: temperature 0.9, top_k -1, top_p 1; drafts: DFly2 (~/hy4/int/drafter-4b); context: 4096; loaded in 45.5s)
+info: Hy4 (hy_v4_vl, tp=4 rank=0) loaded in 43.00 s: 78 layers, 1 stream, 0.36 GiB lossless BF16 KV/stream at 4096 window, weights=75.22 GiB (weight_bytes=80764690564), room_after_reserve=27.00 GiB, trunk=4b6b, drafter=DFly2 4-bit, head=fp32, repeat_stable=on
+## rank1_node2.log
+info: Hy4 (hy_v4_vl, tp=4 rank=1) loaded in 43.07 s: 78 layers, 1 stream, 0.36 GiB lossless BF16 KV/stream at 4096 window, weights=75.22 GiB (weight_bytes=80764690564), room_after_reserve=27.25 GiB, trunk=4b6b, drafter=DFly2 4-bit, head=fp32, repeat_stable=on
+## rank2_node4.log
+info: Hy4 (hy_v4_vl, tp=4 rank=2) loaded in 27.47 s: 78 layers, 1 stream, 0.36 GiB lossless BF16 KV/stream at 4096 window, weights=75.22 GiB (weight_bytes=80764690564), room_after_reserve=27.01 GiB, trunk=4b6b, drafter=DFly2 4-bit, head=fp32, repeat_stable=on
+## rank3_node3.log
+info: Hy4 (hy_v4_vl, tp=4 rank=3) loaded in 43.09 s: 78 layers, 1 stream, 0.36 GiB lossless BF16 KV/stream at 4096 window, weights=75.22 GiB (weight_bytes=80764690564), room_after_reserve=27.22 GiB, trunk=4b6b, drafter=DFly2 4-bit, head=fp32, repeat_stable=on

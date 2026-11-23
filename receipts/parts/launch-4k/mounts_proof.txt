@@ -1,0 +1,8 @@
+=== rank 0 (node1) hy4-winD-parts-r0 ===
+~/hy4/int/drafter-4b -> ~/hy4/int/drafter-4b (ro)\n~/hy4/int/parts-78l-4b6b -> ~/hy4/int/parts-78l-4b6b (ro)\n~/hy4/int/winB-bin/tensorfold-native -> ~/hy4/int/winB-bin/tensorfold-native (ro)\n~/hy4/int/winB-bin/tp_mailbox.fatbin -> ~/hy4/int/winB-bin/tp_mailbox.fatbin (ro)\n
+=== rank 1 (node2) hy4-winD-parts-r1 ===
+~/hy4/int/winB-bin/tensorfold-native -> ~/hy4/int/winB-bin/tensorfold-native (ro)\n~/hy4/int/winB-bin/tp_mailbox.fatbin -> ~/hy4/int/winB-bin/tp_mailbox.fatbin (ro)\n~/hy4/int/drafter-4b -> ~/hy4/int/drafter-4b (ro)\n~/hy4/int/parts-78l-4b6b -> ~/hy4/int/parts-78l-4b6b (ro)\n
+=== rank 2 (node4) hy4-winD-parts-r2 ===
+~/hy4/int/drafter-4b -> ~/hy4/int/drafter-4b (ro)\n~/hy4/int/parts-78l-4b6b -> ~/hy4/int/parts-78l-4b6b (ro)\n~/hy4/int/winB-bin/tensorfold-native -> ~/hy4/int/winB-bin/tensorfold-native (ro)\n~/hy4/int/winB-bin/tp_mailbox.fatbin -> ~/hy4/int/winB-bin/tp_mailbox.fatbin (ro)\n
+=== rank 3 (node3) hy4-winD-parts-r3 ===
+~/hy4/int/winB-bin/tp_mailbox.fatbin -> ~/hy4/int/winB-bin/tp_mailbox.fatbin (ro)\n~/hy4/int/drafter-4b -> ~/hy4/int/drafter-4b (ro)\n~/hy4/int/parts-78l-4b6b -> ~/hy4/int/parts-78l-4b6b (ro)\n~/hy4/int/winB-bin/tensorfold-native -> ~/hy4/int/winB-bin/tensorfold-native (ro)\n

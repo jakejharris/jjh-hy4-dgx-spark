@@ -1,0 +1,4 @@
+# The curl lines that probed an https image URL on window 2's first boot (run_window2.sh, Boot A).
+  curl -sS -m 30 -o "$S/run/release/codecs-engine/https_url_probe.body" -w "%{http_code}\n" -H "Content-Type: application/json" \
+    -d "{\"model\":\"${MODEL_ID}\",\"max_tokens\":8,\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"What is in the image?\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"https://image-probe.invalid/x.png\"}}]}]}" \
+    "$URL/v1/chat/completions" > "$S/run/release/codecs-engine/https_url_probe.status"

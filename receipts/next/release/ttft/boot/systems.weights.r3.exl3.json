@@ -1,0 +1,13 @@
+{
+  "claim_id": "systems.weights.r3.exl3",
+  "generated_utc": "2026-11-23T00:11:39Z",
+  "label": "release-ttft",
+  "isolation": "quiet",
+  "rank": 3,
+  "unit": "GiB",
+  "value": 75.22,
+  "weight_bytes": 80764690564,
+  "source": "rank_log",
+  "status": "measured",
+  "note": null
+}

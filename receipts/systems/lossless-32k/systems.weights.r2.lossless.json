@@ -1,0 +1,13 @@
+{
+  "claim_id": "systems.weights.r2.lossless",
+  "generated_utc": "2026-11-21T16:15:44Z",
+  "label": "78l-lossless-32k-dfly4b-relay",
+  "isolation": "quiet",
+  "rank": 2,
+  "unit": "GiB",
+  "value": 83.72,
+  "weight_bytes": 89891496068,
+  "source": "rank_log",
+  "status": "measured",
+  "note": null
+}

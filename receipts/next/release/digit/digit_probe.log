@@ -1,0 +1,8 @@
+jpg draft=on logprobs=no: 200 The number 14 is in the center, with a red left half and a blue right half.
+jpg draft=off logprobs=no: 200 The number 74 is in the center, with a red left half and a blue right half.
+png draft=on logprobs=no: 200 The number 14 is in the center, with a red left half and a blue right half.
+png draft=off logprobs=no: 200 The number 74 is in the center, with a red left half and a blue right half.
+jpg draft=on logprobs=yes: 400 logprobs are not supported by this model or backend
+jpg draft=off logprobs=yes: 400 logprobs are not supported by this model or backend
+png draft=on logprobs=yes: 400 logprobs are not supported by this model or backend
+png draft=off logprobs=yes: 400 logprobs are not supported by this model or backend

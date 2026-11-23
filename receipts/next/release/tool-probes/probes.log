@@ -1,0 +1,4 @@
+tool_auto 200 tool_calls [{'name': 'get_weather', 'arguments': '{"city":"Austin, TX"}'}]
+tool_required 400 None backend 'cuda' cannot enforce tool_choice "required" or a named function: it has no token grammar support; send "auto" or "none"
+format_json_schema 400 None structured output (response_format and the guided_* fields) is not supported by this engine yet
+format_json_object 400 None structured output (response_format and the guided_* fields) is not supported by this engine yet

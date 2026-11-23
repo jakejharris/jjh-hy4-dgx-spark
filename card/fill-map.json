@@ -1,0 +1,1219 @@
+{
+  "about": "Where tools/fill_claims.py finds each claim's value in a folder of boot outputs, and which labels it checks before writing. Paths are relative to the --outputs folder; {pick} is the trunk width in build.full.trunk. Each claim's receipt path comes from card/claims.json. The panel setups say relay transport (launch/ring.relay.env.example).",
+  "layout": {
+    "widths/": "width table over 4b, 4b6b and 6b (width_table.json)",
+    "exl3-4k/": "full quant at the picked width, 4,096-token window: plain boot then drafted boot with the repeat option off (TF_HY4_REPEAT_STABLE unset). Bench outputs named <width>-4k-plain_<prompt>.json and <width>-4k-dfly_<prompt>.json, boot records plain_boot_meta.json and dfly_boot_meta.json (repeat_stable false), draft_diff.json (drafted run 1 against plain run 1), draftoff_vs_plain_diff.json (\"draft\": false requests on the drafted boot against plain run 1), teacher score <width>_score.json; fresh-set score <width>_fresh_score.json; drafted-path grid score <width>_dfly_grid_score.json with the grid boot's record grid_dfly_boot_meta.json (repeat_stable true)",
+    "lossless-4k-plain/": "lossless trunk, plain boot, 4,096-token window: lossless-4k-plain_<prompt>.json, boot_meta.json",
+    "lossless-4k-dfly/": "lossless trunk, drafted boot with the repeat option on, 4,096-token window: lossless-4k-dfly_<prompt>.json, boot_meta.json, draft_diff.json",
+    "lossless-teacher/": "teacher scores of the lossless trunk: lossless_score.json (familiar set), lossless_fresh_score.json (fresh set)",
+    "exl3-32k/": "full quant, 32,768-token window, drafted boot with the repeat option on: pp32k_default.json, boot_meta.json",
+    "lossless-32k/": "lossless trunk, 32,768-token window, drafted boot with the repeat option on: pp32k_default.json, boot_meta.json",
+    "exl3-128k/": "full quant, 131,072-token window, drafted boot with the repeat option on: niah_128k_default.json, niah_128k_nothink.json, boot_meta.json",
+    "lossless-128k/": "lossless trunk, 131,072-token window: not booted (its claims are tier later)",
+    "systems-exl3-128k/": "launch/collect_receipts.py output of the full quant 128K boot (summary.json and systems.*.exl3.json)",
+    "systems-lossless-32k/": "launch/collect_receipts.py output of the lossless trunk 32K boot (summary.json and systems.*.lossless.json); the lossless trunk is not booted at 128K",
+    "exl3-4k-rs/": "full quant, drafted boot with TF_HY4_REPEAT_STABLE=1 (the kit default, the headline drafted rows): <width>-4k-rs_<prompt>.json (three runs each), boot_meta.json with repeat_stable true, draft_diff.json (this boot's run 1 against the plain run 1 in exl3-4k/)",
+    "exl3-4k-cutoff05/": "the cutoff report (cutoff_summary.json) of two drafted boots with the repeat option on, TF_HY4_DRAFT_MIN_MARGIN unset and 0.5",
+    "rigmark/": "RigMark 1.3.0 standard suite on the full quant (131,072-token window, drafts on), thinking off (reasoning_effort no_think): the JSON receipt RigMark's bench.py writes, hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink.json; a quick or partial run is refused"
+  },
+  "expect_keys": {
+    "trunk": "trunk label in the boot record (lossless, 4b, 4b6b, 6b); @pick means build.full.trunk; in a RigMark receipt, run.appliance.quantisation names '<width> trunk'",
+    "drafter": "drafter label in the boot record: none, on (any DFly2 drafter), or an exact label; @pick_drafter looks up pick_drafter; in a RigMark receipt, run.appliance.drafter starts with it",
+    "context": "context window in the boot record (and in the needle prompt's meta); in a RigMark receipt, run.appliance.context_limit",
+    "layers": "layers loaded, from the boot record",
+    "transport": "network path in the boot record: stock (NCCL IB) or relay (the direct RoCE relay, launch/ring.relay.env.example); the setups say relay, so a stock boot is refused until its setup says so",
+    "prompt": "prompt file name in a bench output",
+    "thinking": "on (reasoning_effort omitted) or off (no_think)",
+    "drafts": "every bench run reports this drafts flag",
+    "runs": "at least this many runs",
+    "pairs": "prompts compared, plain against drafted (or against \"draft\": false requests)",
+    "label": "label in a teacher score file, or run.label in a RigMark receipt",
+    "comparison_id": "run.comparison_id in a RigMark receipt",
+    "paired_vs": "baseline label in a paired teacher score file",
+    "positions_min": "at least this many scored positions",
+    "teacher_kind": "reference shape in a teacher score file; @prefix_set:NAME means the shape of eval/prefixes/NAME/manifest.json (count x seq_len), so only scores on that kit prefix set fill",
+    "claim_id": "claim id written inside a launch/collect_receipts.py file",
+    "ranks": "ranks in summary.json",
+    "repeat_stable": "repeat_stable in the boot record (true when the server's startup line says TF_HY4_REPEAT_STABLE is on); on an entry with meta_off, the off boot's record must say the opposite",
+    "margin": "TF_HY4_DRAFT_MIN_MARGIN of the 'on' boot in a cutoff report",
+    "protocol": "RigMark protocol version in a RigMark receipt",
+    "revision": "RigMark git revision in a RigMark receipt (protocol.repository_revision); the tree must be recorded clean",
+    "extra_body": "fields RigMark merged into every chat request (settings.extra_body)",
+    "gpu_clocks": "GPU clock setting in a RigMark receipt (run.appliance.gpu_clocks)"
+  },
+  "pick_drafter": {
+    "4b": "DFly2 4-bit",
+    "4b6b": "DFly2 4-bit",
+    "6b": "DFly2 6-bit"
+  },
+  "claims": [
+    {
+      "id": "build.full.trunk",
+      "kind": "pick",
+      "file": "widths/width_table.json",
+      "expect": {}
+    },
+    {
+      "id": "speed.4k.prose.plain.exl3",
+      "kind": "bench_median",
+      "file": "exl3-4k/{pick}-4k-plain_prose_default.json",
+      "field": "tg_tps",
+      "meta": "exl3-4k/plain_boot_meta.json",
+      "meta_receipt": "receipts/speed/exl3-4k/boot-plain.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "none",
+        "prompt": "short-prose.txt",
+        "thinking": "on",
+        "drafts": false,
+        "runs": 3
+      }
+    },
+    {
+      "id": "speed.4k.prose.dfly.exl3",
+      "kind": "bench_median",
+      "file": "exl3-4k-rs/{pick}-4k-rs_prose_default.json",
+      "field": "tg_tps",
+      "meta": "exl3-4k-rs/boot_meta.json",
+      "meta_receipt": "receipts/speed/exl3-4k-rs/boot-dfly.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "@pick_drafter",
+        "prompt": "short-prose.txt",
+        "thinking": "on",
+        "drafts": true,
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "speed.4k.code.plain.exl3",
+      "kind": "bench_median",
+      "file": "exl3-4k/{pick}-4k-plain_code_default.json",
+      "field": "tg_tps",
+      "meta": "exl3-4k/plain_boot_meta.json",
+      "meta_receipt": "receipts/speed/exl3-4k/boot-plain.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "none",
+        "prompt": "short-code.txt",
+        "thinking": "on",
+        "drafts": false,
+        "runs": 3
+      }
+    },
+    {
+      "id": "speed.4k.code.dfly.exl3",
+      "kind": "bench_median",
+      "file": "exl3-4k-rs/{pick}-4k-rs_code_default.json",
+      "field": "tg_tps",
+      "meta": "exl3-4k-rs/boot_meta.json",
+      "meta_receipt": "receipts/speed/exl3-4k-rs/boot-dfly.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "@pick_drafter",
+        "prompt": "short-code.txt",
+        "thinking": "on",
+        "drafts": true,
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "speed.4k.prose.off.plain.exl3",
+      "kind": "bench_median",
+      "file": "exl3-4k/{pick}-4k-plain_prose_nothink.json",
+      "field": "tg_tps",
+      "meta": "exl3-4k/plain_boot_meta.json",
+      "meta_receipt": "receipts/speed/exl3-4k/boot-plain.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "none",
+        "prompt": "short-prose.txt",
+        "thinking": "off",
+        "drafts": false,
+        "runs": 3
+      }
+    },
+    {
+      "id": "speed.4k.kept.prose.exl3",
+      "kind": "bench_kept",
+      "file": "exl3-4k-rs/{pick}-4k-rs_prose_default.json",
+      "meta": "exl3-4k-rs/boot_meta.json",
+      "meta_receipt": "receipts/speed/exl3-4k-rs/boot-dfly.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "@pick_drafter",
+        "prompt": "short-prose.txt",
+        "thinking": "on",
+        "drafts": true,
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "quality.drafts.same.exl3",
+      "kind": "draft_same",
+      "file": "exl3-4k-rs/draft_diff.json",
+      "meta": "exl3-4k-rs/boot_meta.json",
+      "meta_receipt": "receipts/speed/exl3-4k-rs/boot-dfly.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "@pick_drafter",
+        "pairs": 3,
+        "repeat_stable": true
+      },
+      "note": "first run of each prompt, drafts on with the repeat option on against the plain boot, same build"
+    },
+    {
+      "id": "quality.teacher.top1.exl3",
+      "kind": "teacher_top1",
+      "file": "exl3-4k/{pick}_score.json",
+      "expect": {
+        "label": "@pick",
+        "teacher_kind": "@prefix_set:familiar",
+        "positions_min": 256
+      }
+    },
+    {
+      "id": "quality.teacher.delta.exl3",
+      "kind": "teacher_delta",
+      "file": "exl3-4k/{pick}_score.json",
+      "expect": {
+        "label": "@pick",
+        "paired_vs": "lossless",
+        "teacher_kind": "@prefix_set:familiar",
+        "positions_min": 256
+      }
+    },
+    {
+      "id": "long.pp32k.prefill.exl3",
+      "kind": "bench_median",
+      "file": "exl3-32k/pp32k_default.json",
+      "field": "pp_tps",
+      "meta": "exl3-32k/boot_meta.json",
+      "meta_receipt": "receipts/long/exl3-32k/boot.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 32768,
+        "layers": 78,
+        "drafter": "on",
+        "transport": "relay",
+        "prompt": "pp-32k.txt",
+        "thinking": "on",
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "long.pp32k.ttft.exl3",
+      "kind": "bench_median",
+      "file": "exl3-32k/pp32k_default.json",
+      "field": "ttft_s",
+      "meta": "exl3-32k/boot_meta.json",
+      "meta_receipt": "receipts/long/exl3-32k/boot.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 32768,
+        "layers": 78,
+        "drafter": "on",
+        "transport": "relay",
+        "prompt": "pp-32k.txt",
+        "thinking": "on",
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "long.pp32k.decode.exl3",
+      "kind": "bench_median",
+      "file": "exl3-32k/pp32k_default.json",
+      "field": "tg_tps",
+      "meta": "exl3-32k/boot_meta.json",
+      "meta_receipt": "receipts/long/exl3-32k/boot.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 32768,
+        "layers": 78,
+        "drafter": "on",
+        "transport": "relay",
+        "prompt": "pp-32k.txt",
+        "thinking": "on",
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "long.niah128k.prefill.exl3",
+      "kind": "niah_field",
+      "file": "exl3-128k/niah_128k_default.json",
+      "field": "pp_tps",
+      "meta": "exl3-128k/boot_meta.json",
+      "meta_receipt": "receipts/long/exl3-128k/boot.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "drafter": "on",
+        "transport": "relay",
+        "thinking": "on",
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "long.niah128k.ttft.exl3",
+      "kind": "niah_field",
+      "file": "exl3-128k/niah_128k_default.json",
+      "field": "ttft_s",
+      "meta": "exl3-128k/boot_meta.json",
+      "meta_receipt": "receipts/long/exl3-128k/boot.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "drafter": "on",
+        "transport": "relay",
+        "thinking": "on",
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "long.niah128k.decode.exl3",
+      "kind": "niah_field",
+      "file": "exl3-128k/niah_128k_default.json",
+      "field": "tg_tps",
+      "meta": "exl3-128k/boot_meta.json",
+      "meta_receipt": "receipts/long/exl3-128k/boot.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "drafter": "on",
+        "transport": "relay",
+        "thinking": "on",
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "long.niah128k.on.exl3",
+      "kind": "niah_pass",
+      "file": "exl3-128k/niah_128k_default.json",
+      "meta": "exl3-128k/boot_meta.json",
+      "meta_receipt": "receipts/long/exl3-128k/boot.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "drafter": "on",
+        "transport": "relay",
+        "thinking": "on",
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "long.niah128k.off.exl3",
+      "kind": "niah_pass",
+      "file": "exl3-128k/niah_128k_nothink.json",
+      "meta": "exl3-128k/boot_meta.json",
+      "meta_receipt": "receipts/long/exl3-128k/boot-off.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "drafter": "on",
+        "transport": "relay",
+        "thinking": "off",
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "systems.weights.max.exl3",
+      "kind": "ranks_max",
+      "file": "systems-exl3-128k/summary.json",
+      "field": "weights_gib",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4
+      }
+    },
+    {
+      "id": "systems.memory.min128k.exl3",
+      "kind": "ranks_min",
+      "file": "systems-exl3-128k/summary.json",
+      "field": "memfloor.min_avail_gib",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4
+      }
+    },
+    {
+      "id": "systems.weights.r0.exl3",
+      "kind": "receipt_value",
+      "file": "systems-exl3-128k/systems.weights.r0.exl3.json",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.weights.r0.exl3"
+      }
+    },
+    {
+      "id": "systems.memory.r0.exl3",
+      "kind": "receipt_value",
+      "file": "systems-exl3-128k/systems.memory.r0.exl3.json",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.memory.r0.exl3"
+      }
+    },
+    {
+      "id": "systems.weights.r1.exl3",
+      "kind": "receipt_value",
+      "file": "systems-exl3-128k/systems.weights.r1.exl3.json",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.weights.r1.exl3"
+      }
+    },
+    {
+      "id": "systems.memory.r1.exl3",
+      "kind": "receipt_value",
+      "file": "systems-exl3-128k/systems.memory.r1.exl3.json",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.memory.r1.exl3"
+      }
+    },
+    {
+      "id": "systems.weights.r2.exl3",
+      "kind": "receipt_value",
+      "file": "systems-exl3-128k/systems.weights.r2.exl3.json",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.weights.r2.exl3"
+      }
+    },
+    {
+      "id": "systems.memory.r2.exl3",
+      "kind": "receipt_value",
+      "file": "systems-exl3-128k/systems.memory.r2.exl3.json",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.memory.r2.exl3"
+      }
+    },
+    {
+      "id": "systems.weights.r3.exl3",
+      "kind": "receipt_value",
+      "file": "systems-exl3-128k/systems.weights.r3.exl3.json",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.weights.r3.exl3"
+      }
+    },
+    {
+      "id": "systems.memory.r3.exl3",
+      "kind": "receipt_value",
+      "file": "systems-exl3-128k/systems.memory.r3.exl3.json",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.memory.r3.exl3"
+      }
+    },
+    {
+      "id": "systems.kv.pool.exl3",
+      "kind": "receipt_value",
+      "file": "systems-exl3-128k/systems.kv.pool.exl3.json",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.kv.pool.exl3"
+      }
+    },
+    {
+      "id": "systems.load.cold.exl3",
+      "kind": "receipt_value",
+      "file": "systems-exl3-128k/systems.load.cold.exl3.json",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.load.cold.exl3"
+      }
+    },
+    {
+      "id": "systems.launch.exl3",
+      "kind": "receipt_value",
+      "file": "systems-exl3-128k/systems.launch.exl3.json",
+      "field": "verdict",
+      "meta": "systems-exl3-128k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "@pick",
+        "context": 131072,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.launch.exl3"
+      }
+    },
+    {
+      "id": "speed.4k.prose.plain.lossless",
+      "kind": "bench_median",
+      "file": "lossless-4k-plain/lossless-4k-plain_prose_default.json",
+      "field": "tg_tps",
+      "meta": "lossless-4k-plain/boot_meta.json",
+      "meta_receipt": "receipts/speed/lossless-4k/boot-plain.json",
+      "expect": {
+        "trunk": "lossless",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "none",
+        "prompt": "short-prose.txt",
+        "thinking": "on",
+        "drafts": false,
+        "runs": 3
+      }
+    },
+    {
+      "id": "speed.4k.prose.dfly.lossless",
+      "kind": "bench_median",
+      "file": "lossless-4k-dfly/lossless-4k-dfly_prose_default.json",
+      "field": "tg_tps",
+      "meta": "lossless-4k-dfly/boot_meta.json",
+      "meta_receipt": "receipts/speed/lossless-4k/boot-dfly.json",
+      "expect": {
+        "trunk": "lossless",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "DFly2 4-bit",
+        "prompt": "short-prose.txt",
+        "thinking": "on",
+        "drafts": true,
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "speed.4k.code.plain.lossless",
+      "kind": "bench_median",
+      "file": "lossless-4k-plain/lossless-4k-plain_code_default.json",
+      "field": "tg_tps",
+      "meta": "lossless-4k-plain/boot_meta.json",
+      "meta_receipt": "receipts/speed/lossless-4k/boot-plain.json",
+      "expect": {
+        "trunk": "lossless",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "none",
+        "prompt": "short-code.txt",
+        "thinking": "on",
+        "drafts": false,
+        "runs": 3
+      }
+    },
+    {
+      "id": "speed.4k.code.dfly.lossless",
+      "kind": "bench_median",
+      "file": "lossless-4k-dfly/lossless-4k-dfly_code_default.json",
+      "field": "tg_tps",
+      "meta": "lossless-4k-dfly/boot_meta.json",
+      "meta_receipt": "receipts/speed/lossless-4k/boot-dfly.json",
+      "expect": {
+        "trunk": "lossless",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "DFly2 4-bit",
+        "prompt": "short-code.txt",
+        "thinking": "on",
+        "drafts": true,
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "speed.4k.prose.off.plain.lossless",
+      "kind": "bench_median",
+      "file": "lossless-4k-plain/lossless-4k-plain_prose_nothink.json",
+      "field": "tg_tps",
+      "meta": "lossless-4k-plain/boot_meta.json",
+      "meta_receipt": "receipts/speed/lossless-4k/boot-plain.json",
+      "expect": {
+        "trunk": "lossless",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "none",
+        "prompt": "short-prose.txt",
+        "thinking": "off",
+        "drafts": false,
+        "runs": 3
+      }
+    },
+    {
+      "id": "speed.4k.kept.prose.lossless",
+      "kind": "bench_kept",
+      "file": "lossless-4k-dfly/lossless-4k-dfly_prose_default.json",
+      "meta": "lossless-4k-dfly/boot_meta.json",
+      "meta_receipt": "receipts/speed/lossless-4k/boot-dfly.json",
+      "expect": {
+        "trunk": "lossless",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "DFly2 4-bit",
+        "prompt": "short-prose.txt",
+        "thinking": "on",
+        "drafts": true,
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "quality.drafts.same.lossless",
+      "kind": "draft_same",
+      "file": "lossless-4k-dfly/draft_diff.json",
+      "meta": "lossless-4k-dfly/boot_meta.json",
+      "meta_receipt": "receipts/speed/lossless-4k/boot-dfly.json",
+      "expect": {
+        "trunk": "lossless",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "DFly2 4-bit",
+        "pairs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "quality.teacher.top1.lossless",
+      "kind": "teacher_top1",
+      "file": "lossless-teacher/lossless_score.json",
+      "expect": {
+        "label": "lossless",
+        "teacher_kind": "@prefix_set:familiar",
+        "positions_min": 256
+      }
+    },
+    {
+      "id": "long.pp32k.prefill.lossless",
+      "kind": "bench_median",
+      "file": "lossless-32k/pp32k_default.json",
+      "field": "pp_tps",
+      "meta": "lossless-32k/boot_meta.json",
+      "meta_receipt": "receipts/long/lossless-32k/boot.json",
+      "expect": {
+        "trunk": "lossless",
+        "context": 32768,
+        "layers": 78,
+        "drafter": "on",
+        "transport": "relay",
+        "prompt": "pp-32k.txt",
+        "thinking": "on",
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "long.pp32k.ttft.lossless",
+      "kind": "bench_median",
+      "file": "lossless-32k/pp32k_default.json",
+      "field": "ttft_s",
+      "meta": "lossless-32k/boot_meta.json",
+      "meta_receipt": "receipts/long/lossless-32k/boot.json",
+      "expect": {
+        "trunk": "lossless",
+        "context": 32768,
+        "layers": 78,
+        "drafter": "on",
+        "transport": "relay",
+        "prompt": "pp-32k.txt",
+        "thinking": "on",
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "long.pp32k.decode.lossless",
+      "kind": "bench_median",
+      "file": "lossless-32k/pp32k_default.json",
+      "field": "tg_tps",
+      "meta": "lossless-32k/boot_meta.json",
+      "meta_receipt": "receipts/long/lossless-32k/boot.json",
+      "expect": {
+        "trunk": "lossless",
+        "context": 32768,
+        "layers": 78,
+        "drafter": "on",
+        "transport": "relay",
+        "prompt": "pp-32k.txt",
+        "thinking": "on",
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "systems.weights.max.lossless",
+      "kind": "ranks_max",
+      "file": "systems-lossless-32k/summary.json",
+      "field": "weights_gib",
+      "meta": "systems-lossless-32k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "lossless",
+        "context": 32768,
+        "layers": 78,
+        "ranks": 4
+      }
+    },
+    {
+      "id": "systems.weights.r0.lossless",
+      "kind": "receipt_value",
+      "file": "systems-lossless-32k/systems.weights.r0.lossless.json",
+      "meta": "systems-lossless-32k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "lossless",
+        "context": 32768,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.weights.r0.lossless"
+      }
+    },
+    {
+      "id": "systems.weights.r1.lossless",
+      "kind": "receipt_value",
+      "file": "systems-lossless-32k/systems.weights.r1.lossless.json",
+      "meta": "systems-lossless-32k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "lossless",
+        "context": 32768,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.weights.r1.lossless"
+      }
+    },
+    {
+      "id": "systems.weights.r2.lossless",
+      "kind": "receipt_value",
+      "file": "systems-lossless-32k/systems.weights.r2.lossless.json",
+      "meta": "systems-lossless-32k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "lossless",
+        "context": 32768,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.weights.r2.lossless"
+      }
+    },
+    {
+      "id": "systems.weights.r3.lossless",
+      "kind": "receipt_value",
+      "file": "systems-lossless-32k/systems.weights.r3.lossless.json",
+      "meta": "systems-lossless-32k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "lossless",
+        "context": 32768,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.weights.r3.lossless"
+      }
+    },
+    {
+      "id": "systems.kv.pool.lossless",
+      "kind": "receipt_value",
+      "file": "systems-lossless-32k/systems.kv.pool.lossless.json",
+      "meta": "systems-lossless-32k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "lossless",
+        "context": 32768,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.kv.pool.lossless"
+      }
+    },
+    {
+      "id": "systems.load.cold.lossless",
+      "kind": "receipt_value",
+      "file": "systems-lossless-32k/systems.load.cold.lossless.json",
+      "meta": "systems-lossless-32k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "lossless",
+        "context": 32768,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.load.cold.lossless"
+      }
+    },
+    {
+      "id": "systems.launch.lossless",
+      "kind": "receipt_value",
+      "file": "systems-lossless-32k/systems.launch.lossless.json",
+      "field": "verdict",
+      "meta": "systems-lossless-32k/summary.json",
+      "meta_kind": "summary",
+      "expect": {
+        "trunk": "lossless",
+        "context": 32768,
+        "layers": 78,
+        "ranks": 4,
+        "claim_id": "systems.launch.lossless"
+      }
+    },
+    {
+      "id": "quality.teacher.fresh.top1.exl3",
+      "kind": "teacher_top1",
+      "file": "exl3-4k/{pick}_fresh_score.json",
+      "expect": {
+        "label": "@pick",
+        "teacher_kind": "@prefix_set:fresh",
+        "positions_min": 256
+      }
+    },
+    {
+      "id": "quality.teacher.fresh.delta.exl3",
+      "kind": "teacher_delta",
+      "file": "exl3-4k/{pick}_fresh_score.json",
+      "expect": {
+        "label": "@pick",
+        "paired_vs": "lossless",
+        "teacher_kind": "@prefix_set:fresh",
+        "positions_min": 256
+      }
+    },
+    {
+      "id": "quality.teacher.fresh.top1.lossless",
+      "kind": "teacher_top1",
+      "file": "lossless-teacher/lossless_fresh_score.json",
+      "expect": {
+        "label": "lossless",
+        "teacher_kind": "@prefix_set:fresh",
+        "positions_min": 256
+      }
+    },
+    {
+      "id": "speed.4k.repeatstable.same.exl3",
+      "kind": "repeats_equal",
+      "file": "exl3-4k-rs/{pick}-4k-rs_prose_default.json",
+      "more": [
+        "exl3-4k-rs/{pick}-4k-rs_prose_nothink.json",
+        "exl3-4k-rs/{pick}-4k-rs_code_default.json",
+        "exl3-4k-rs/{pick}-4k-rs_pp4k_default.json"
+      ],
+      "meta": "exl3-4k-rs/boot_meta.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "@pick_drafter",
+        "drafts": true,
+        "runs": 3,
+        "repeat_stable": true
+      },
+      "meta_receipt": "receipts/speed/exl3-4k-rs/boot-dfly.json"
+    },
+    {
+      "id": "speed.4k.repeatstable.same.rsoff.exl3",
+      "kind": "repeats_equal",
+      "file": "exl3-4k/{pick}-4k-dfly_prose_default.json",
+      "more": [
+        "exl3-4k/{pick}-4k-dfly_prose_nothink.json",
+        "exl3-4k/{pick}-4k-dfly_code_default.json",
+        "exl3-4k/{pick}-4k-dfly_pp4k_default.json"
+      ],
+      "meta": "exl3-4k/dfly_boot_meta.json",
+      "meta_receipt": "receipts/speed/exl3-4k/boot-dfly.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "@pick_drafter",
+        "drafts": true,
+        "runs": 3,
+        "repeat_stable": false
+      }
+    },
+    {
+      "id": "quality.drafts.same.rsoff.exl3",
+      "kind": "draft_same",
+      "file": "exl3-4k/draft_diff.json",
+      "meta": "exl3-4k/dfly_boot_meta.json",
+      "meta_receipt": "receipts/speed/exl3-4k/boot-dfly.json",
+      "note": "first run of each prompt, drafts on with the repeat option off against the plain boot, same build",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "@pick_drafter",
+        "pairs": 3,
+        "repeat_stable": false
+      }
+    },
+    {
+      "id": "quality.drafts.off.request.exl3",
+      "kind": "draft_same",
+      "file": "exl3-4k/draftoff_vs_plain_diff.json",
+      "meta": "exl3-4k/dfly_boot_meta.json",
+      "note": "one request per prompt with \"draft\": false on the drafted boot, against the plain boot, same build",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "@pick_drafter",
+        "pairs": 3,
+        "repeat_stable": false
+      }
+    },
+    {
+      "id": "speed.4k.repeatstable.speed.exl3",
+      "kind": "on_off_median",
+      "file": "exl3-4k-rs/{pick}-4k-rs_prose_default.json",
+      "more": [
+        "exl3-4k-rs/{pick}-4k-rs_prose_nothink.json",
+        "exl3-4k-rs/{pick}-4k-rs_code_default.json",
+        "exl3-4k-rs/{pick}-4k-rs_pp4k_default.json"
+      ],
+      "off": [
+        "exl3-4k/{pick}-4k-dfly_prose_default.json",
+        "exl3-4k/{pick}-4k-dfly_prose_nothink.json",
+        "exl3-4k/{pick}-4k-dfly_code_default.json",
+        "exl3-4k/{pick}-4k-dfly_pp4k_default.json"
+      ],
+      "meta": "exl3-4k-rs/boot_meta.json",
+      "meta_off": "exl3-4k/dfly_boot_meta.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "@pick_drafter",
+        "drafts": true,
+        "runs": 3,
+        "repeat_stable": true
+      },
+      "meta_receipt": "receipts/speed/exl3-4k-rs/boot-dfly.json"
+    },
+    {
+      "id": "speed.4k.cutoff05.exl3",
+      "kind": "cutoff_summary",
+      "file": "exl3-4k-cutoff05/cutoff_summary.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "@pick_drafter",
+        "margin": "0.5",
+        "runs": 3,
+        "repeat_stable": true
+      }
+    },
+    {
+      "id": "quality.drafts.top1.exl3",
+      "kind": "grid_top1",
+      "file": "exl3-4k/{pick}_dfly_grid_score.json",
+      "expect": {
+        "trunk": "@pick",
+        "context": 4096,
+        "layers": 78,
+        "transport": "relay",
+        "drafter": "@pick_drafter",
+        "repeat_stable": true,
+        "teacher_kind": "teacher_all(64x384)",
+        "positions_min": 192
+      },
+      "meta": "exl3-4k/grid_dfly_boot_meta.json",
+      "meta_receipt": "receipts/quality/drafts-top1-boot.json"
+    },
+    {
+      "id": "rigmark.decode.code",
+      "kind": "rigmark",
+      "file": "rigmark/hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink.json",
+      "field": "decode.code.decode_tokens_per_second.median",
+      "range": "decode.code.decode_tokens_per_second",
+      "runs": "decode.code.runs",
+      "count_word": "runs",
+      "gate": "decode.code.completion_gate",
+      "expect": {
+        "protocol": "1.3.0",
+        "revision": "68800bf29cf1f85f834affdf81fe3e8703327342",
+        "label": "hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink",
+        "comparison_id": "2026-11-21-hy4-exl3-4b6b-rigmark-1.3-nothink",
+        "extra_body": {
+          "reasoning_effort": "no_think"
+        },
+        "gpu_clocks": "stock (no clock cap)",
+        "trunk": "@pick",
+        "drafter": "@pick_drafter",
+        "context": 131072
+      }
+    },
+    {
+      "id": "rigmark.decode.prose",
+      "kind": "rigmark",
+      "file": "rigmark/hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink.json",
+      "field": "decode.prose.decode_tokens_per_second.median",
+      "range": "decode.prose.decode_tokens_per_second",
+      "runs": "decode.prose.runs",
+      "count_word": "runs",
+      "gate": "decode.prose.completion_gate",
+      "expect": {
+        "protocol": "1.3.0",
+        "revision": "68800bf29cf1f85f834affdf81fe3e8703327342",
+        "label": "hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink",
+        "comparison_id": "2026-11-21-hy4-exl3-4b6b-rigmark-1.3-nothink",
+        "extra_body": {
+          "reasoning_effort": "no_think"
+        },
+        "gpu_clocks": "stock (no clock cap)",
+        "trunk": "@pick",
+        "drafter": "@pick_drafter",
+        "context": 131072
+      }
+    },
+    {
+      "id": "rigmark.decode.structured",
+      "kind": "rigmark",
+      "file": "rigmark/hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink.json",
+      "field": "decode.structured.decode_tokens_per_second.median",
+      "range": "decode.structured.decode_tokens_per_second",
+      "runs": "decode.structured.runs",
+      "count_word": "runs",
+      "gate": "decode.structured.completion_gate",
+      "expect": {
+        "protocol": "1.3.0",
+        "revision": "68800bf29cf1f85f834affdf81fe3e8703327342",
+        "label": "hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink",
+        "comparison_id": "2026-11-21-hy4-exl3-4b6b-rigmark-1.3-nothink",
+        "extra_body": {
+          "reasoning_effort": "no_think"
+        },
+        "gpu_clocks": "stock (no clock cap)",
+        "trunk": "@pick",
+        "drafter": "@pick_drafter",
+        "context": 131072
+      }
+    },
+    {
+      "id": "rigmark.prefill.8k",
+      "kind": "rigmark",
+      "file": "rigmark/hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink.json",
+      "field": "prefill.8192.cold.effective_prefill_tokens_per_second.median",
+      "range": "prefill.8192.cold.effective_prefill_tokens_per_second",
+      "runs": "prefill.8192.cold.runs",
+      "count_word": "cold requests",
+      "cold": true,
+      "expect": {
+        "protocol": "1.3.0",
+        "revision": "68800bf29cf1f85f834affdf81fe3e8703327342",
+        "label": "hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink",
+        "comparison_id": "2026-11-21-hy4-exl3-4b6b-rigmark-1.3-nothink",
+        "extra_body": {
+          "reasoning_effort": "no_think"
+        },
+        "gpu_clocks": "stock (no clock cap)",
+        "trunk": "@pick",
+        "drafter": "@pick_drafter",
+        "context": 131072
+      }
+    },
+    {
+      "id": "rigmark.prefill.32k",
+      "kind": "rigmark",
+      "file": "rigmark/hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink.json",
+      "field": "prefill.32768.cold.effective_prefill_tokens_per_second.median",
+      "range": "prefill.32768.cold.effective_prefill_tokens_per_second",
+      "runs": "prefill.32768.cold.runs",
+      "count_word": "cold requests",
+      "cold": true,
+      "expect": {
+        "protocol": "1.3.0",
+        "revision": "68800bf29cf1f85f834affdf81fe3e8703327342",
+        "label": "hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink",
+        "comparison_id": "2026-11-21-hy4-exl3-4b6b-rigmark-1.3-nothink",
+        "extra_body": {
+          "reasoning_effort": "no_think"
+        },
+        "gpu_clocks": "stock (no clock cap)",
+        "trunk": "@pick",
+        "drafter": "@pick_drafter",
+        "context": 131072
+      }
+    },
+    {
+      "id": "rigmark.prefill.64k",
+      "kind": "rigmark",
+      "file": "rigmark/hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink.json",
+      "field": "prefill.65536.cold.effective_prefill_tokens_per_second.median",
+      "range": "prefill.65536.cold.effective_prefill_tokens_per_second",
+      "runs": "prefill.65536.cold.runs",
+      "count_word": "cold requests",
+      "cold": true,
+      "expect": {
+        "protocol": "1.3.0",
+        "revision": "68800bf29cf1f85f834affdf81fe3e8703327342",
+        "label": "hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink",
+        "comparison_id": "2026-11-21-hy4-exl3-4b6b-rigmark-1.3-nothink",
+        "extra_body": {
+          "reasoning_effort": "no_think"
+        },
+        "gpu_clocks": "stock (no clock cap)",
+        "trunk": "@pick",
+        "drafter": "@pick_drafter",
+        "context": 131072
+      }
+    },
+    {
+      "id": "rigmark.conc.c1",
+      "kind": "rigmark",
+      "file": "rigmark/hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink.json",
+      "field": "concurrency.1.aggregate_end_to_end_tokens_per_second.median",
+      "range": "concurrency.1.aggregate_end_to_end_tokens_per_second",
+      "runs": "concurrency.1.rounds",
+      "count_word": "rounds",
+      "expect": {
+        "protocol": "1.3.0",
+        "revision": "68800bf29cf1f85f834affdf81fe3e8703327342",
+        "label": "hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink",
+        "comparison_id": "2026-11-21-hy4-exl3-4b6b-rigmark-1.3-nothink",
+        "extra_body": {
+          "reasoning_effort": "no_think"
+        },
+        "gpu_clocks": "stock (no clock cap)",
+        "trunk": "@pick",
+        "drafter": "@pick_drafter",
+        "context": 131072
+      }
+    },
+    {
+      "id": "rigmark.conc.c2",
+      "kind": "rigmark",
+      "file": "rigmark/hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink.json",
+      "field": "concurrency.2.aggregate_end_to_end_tokens_per_second.median",
+      "range": "concurrency.2.aggregate_end_to_end_tokens_per_second",
+      "runs": "concurrency.2.rounds",
+      "count_word": "rounds",
+      "expect": {
+        "protocol": "1.3.0",
+        "revision": "68800bf29cf1f85f834affdf81fe3e8703327342",
+        "label": "hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink",
+        "comparison_id": "2026-11-21-hy4-exl3-4b6b-rigmark-1.3-nothink",
+        "extra_body": {
+          "reasoning_effort": "no_think"
+        },
+        "gpu_clocks": "stock (no clock cap)",
+        "trunk": "@pick",
+        "drafter": "@pick_drafter",
+        "context": 131072
+      }
+    },
+    {
+      "id": "rigmark.conc.c4",
+      "kind": "rigmark",
+      "file": "rigmark/hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink.json",
+      "field": "concurrency.4.aggregate_end_to_end_tokens_per_second.median",
+      "range": "concurrency.4.aggregate_end_to_end_tokens_per_second",
+      "runs": "concurrency.4.rounds",
+      "count_word": "rounds",
+      "expect": {
+        "protocol": "1.3.0",
+        "revision": "68800bf29cf1f85f834affdf81fe3e8703327342",
+        "label": "hy4-exl3-4b6b-tp4-4x-dgx-spark-nothink",
+        "comparison_id": "2026-11-21-hy4-exl3-4b6b-rigmark-1.3-nothink",
+        "extra_body": {
+          "reasoning_effort": "no_think"
+        },
+        "gpu_clocks": "stock (no clock cap)",
+        "trunk": "@pick",
+        "drafter": "@pick_drafter",
+        "context": 131072
+      }
+    }
+  ]
+}

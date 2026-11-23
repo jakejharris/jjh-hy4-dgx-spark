@@ -1,0 +1,473 @@
+{
+  "guide_pick": "4b6b",
+  "rows": [
+    {
+      "slot": "b11/b15b/b19",
+      "trunk": "lossless",
+      "drafter_plain": "none",
+      "drafter_drafted": "DFly2 4-bit",
+      "head": "fp32",
+      "layers": 78,
+      "context_window": 4096,
+      "transport": "stock",
+      "weight_bytes_plain": 89202360320,
+      "weights_gib_plain": 83.08,
+      "weight_bytes_drafted": 89891496068,
+      "weights_gib_drafted": 83.72,
+      "min_free_gib": 23.93,
+      "positions_scored": 192,
+      "overall_pct": 93.75,
+      "prose_pct": 90.625,
+      "code_pct": 96.875,
+      "both_match": null,
+      "lossless_only": null,
+      "cand_only": null,
+      "neither": null,
+      "delta_pts_vs_lossless": null,
+      "within_1pt": null,
+      "plain_ms_per_tok": 108.93,
+      "plain_tg_tps": 9.18,
+      "draft_tg_tps": 21.95,
+      "draft_kept_per_round": 2.46,
+      "draft_tokens_per_round": 3.47,
+      "draft_diff": {
+        "all_equal": false,
+        "thinking_on": {
+          "equal": false,
+          "first_diff_pos": 85,
+          "diff_tokens": 36,
+          "total_tokens": 256,
+          "prompts": [
+            "prose_default",
+            "code_default"
+          ]
+        },
+        "thinking_off": {
+          "equal": false,
+          "first_diff_pos": 22,
+          "diff_tokens": 98,
+          "total_tokens": 128,
+          "prompts": [
+            "prose_nothink"
+          ]
+        },
+        "prompts": {
+          "prose_default": {
+            "equal": true,
+            "first_diff_pos": null,
+            "diff_tokens": 0,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "on",
+            "plain_sha256": "ae4a868021e670022b5e9994c25c28419ee43510c0458ff5fa4c3732975fd358",
+            "cand_sha256": "ae4a868021e670022b5e9994c25c28419ee43510c0458ff5fa4c3732975fd358",
+            "plain_tg_tps": 9.19,
+            "cand_tg_tps": 20.84,
+            "cand_speculative": {
+              "rounds": 39,
+              "offered": 206,
+              "accepted": 89,
+              "kept_per_round": 2.282,
+              "tokens_per_round": 3.282051282051282,
+              "acceptance_rate": 0.4320388349514563
+            }
+          },
+          "prose_nothink": {
+            "equal": false,
+            "first_diff_pos": 22,
+            "diff_tokens": 98,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "off",
+            "plain_sha256": "8ed3979619e3c45a85cfd37c5110d2532801bcdda6250b60ee17044dbb6a1c1a",
+            "cand_sha256": "ebe8e97dfc8c116012de867a59f1477e7a6c93f9e91516b19161ec3d0f216d05",
+            "plain_tg_tps": 9.15,
+            "cand_tg_tps": 17.32,
+            "cand_speculative": {
+              "rounds": 46,
+              "offered": 245,
+              "accepted": 81,
+              "kept_per_round": 1.761,
+              "tokens_per_round": 2.782608695652174,
+              "acceptance_rate": 0.3306122448979592
+            }
+          },
+          "code_default": {
+            "equal": false,
+            "first_diff_pos": 85,
+            "diff_tokens": 36,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "on",
+            "plain_sha256": "98910d27cfed75b92c851d903f2cbf1d0c1f8def2d6a2f89b157974a3c2a588d",
+            "cand_sha256": "63b125065e50cbba330e66e5520854df264536033cf7156680cab156dd444940",
+            "plain_tg_tps": 9.14,
+            "cand_tg_tps": 23.97,
+            "cand_speculative": {
+              "rounds": 33,
+              "offered": 184,
+              "accepted": 95,
+              "kept_per_round": 2.879,
+              "tokens_per_round": 3.878787878787879,
+              "acceptance_rate": 0.5163043478260869
+            }
+          }
+        }
+      }
+    },
+    {
+      "slot": "b21",
+      "trunk": "4b",
+      "drafter_plain": "none",
+      "drafter_drafted": "DFly2 4-bit",
+      "head": "fp32",
+      "layers": 78,
+      "context_window": 4096,
+      "transport": "stock",
+      "weight_bytes_plain": 79088322560,
+      "weights_gib_plain": 73.66,
+      "weight_bytes_drafted": 79758057604,
+      "weights_gib_drafted": 74.28,
+      "min_free_gib": 33.22,
+      "positions_scored": 192,
+      "overall_pct": 92.188,
+      "prose_pct": 89.583,
+      "code_pct": 94.792,
+      "both_match": 174,
+      "lossless_only": 6,
+      "cand_only": 3,
+      "neither": 9,
+      "delta_pts_vs_lossless": -1.562,
+      "within_1pt": false,
+      "plain_ms_per_tok": 54.64,
+      "plain_tg_tps": 18.3,
+      "draft_tg_tps": 28.81,
+      "draft_kept_per_round": 2.27,
+      "draft_tokens_per_round": 3.28,
+      "draft_diff": {
+        "all_equal": false,
+        "thinking_on": {
+          "equal": false,
+          "first_diff_pos": 89,
+          "diff_tokens": 63,
+          "total_tokens": 256,
+          "prompts": [
+            "prose_default",
+            "code_default"
+          ]
+        },
+        "thinking_off": {
+          "equal": false,
+          "first_diff_pos": 28,
+          "diff_tokens": 99,
+          "total_tokens": 128,
+          "prompts": [
+            "prose_nothink"
+          ]
+        },
+        "prompts": {
+          "prose_default": {
+            "equal": false,
+            "first_diff_pos": 89,
+            "diff_tokens": 38,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "on",
+            "plain_sha256": "2e0e218601b2e02320f4d9a3edd4559a9cc8eb7fcaedabfc9497e2b0f3715272",
+            "cand_sha256": "3f114157495ae730bc97f741a90e2465cfcc4376b300a17a096a05544e9d4dff",
+            "plain_tg_tps": 18.24,
+            "cand_tg_tps": 28.57,
+            "cand_speculative": {
+              "rounds": 39,
+              "offered": 211,
+              "accepted": 89,
+              "kept_per_round": 2.282,
+              "tokens_per_round": 3.282051282051282,
+              "acceptance_rate": 0.4218009478672986
+            }
+          },
+          "prose_nothink": {
+            "equal": false,
+            "first_diff_pos": 28,
+            "diff_tokens": 99,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "off",
+            "plain_sha256": "49afb54cea87d0808efb4ca3d83e14e4e46b2f1e42562729cb65f7e79d2a55f4",
+            "cand_sha256": "31bfc05951f8a4dbb0a0b6058282cd9fc83e27cd4074cb828970784172060a0a",
+            "plain_tg_tps": 18.27,
+            "cand_tg_tps": 24.15,
+            "cand_speculative": {
+              "rounds": 51,
+              "offered": 207,
+              "accepted": 77,
+              "kept_per_round": 1.51,
+              "tokens_per_round": 2.5098039215686274,
+              "acceptance_rate": 0.3719806763285024
+            }
+          },
+          "code_default": {
+            "equal": false,
+            "first_diff_pos": 103,
+            "diff_tokens": 25,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "on",
+            "plain_sha256": "dcbe14892bb465791a31d6019a2d244bc0790f2a47b0e12d2f2d7c36ce6c8ce0",
+            "cand_sha256": "0af8554a4ad6cad4de91162f55814d3ed4d9ba569f6aff98c03c75ad9e57ef07",
+            "plain_tg_tps": 18.24,
+            "cand_tg_tps": 34.22,
+            "cand_speculative": {
+              "rounds": 32,
+              "offered": 169,
+              "accepted": 95,
+              "kept_per_round": 2.969,
+              "tokens_per_round": 4.0,
+              "acceptance_rate": 0.5621301775147929
+            }
+          }
+        }
+      }
+    },
+    {
+      "slot": "b22",
+      "trunk": "4b6b",
+      "drafter_plain": "none",
+      "drafter_drafted": "DFly2 4-bit",
+      "head": "fp32",
+      "layers": 78,
+      "context_window": 4096,
+      "transport": "stock",
+      "weight_bytes_plain": 80094955520,
+      "weights_gib_plain": 74.59,
+      "weight_bytes_drafted": 80764690564,
+      "weights_gib_drafted": 75.22,
+      "min_free_gib": 32.8,
+      "positions_scored": 192,
+      "overall_pct": 95.833,
+      "prose_pct": 94.792,
+      "code_pct": 96.875,
+      "both_match": 179,
+      "lossless_only": 1,
+      "cand_only": 5,
+      "neither": 7,
+      "delta_pts_vs_lossless": 2.083,
+      "within_1pt": true,
+      "plain_ms_per_tok": 58.93,
+      "plain_tg_tps": 16.97,
+      "draft_tg_tps": 29.93,
+      "draft_kept_per_round": 2.45,
+      "draft_tokens_per_round": 3.46,
+      "draft_diff": {
+        "all_equal": false,
+        "thinking_on": {
+          "equal": false,
+          "first_diff_pos": 53,
+          "diff_tokens": 61,
+          "total_tokens": 256,
+          "prompts": [
+            "prose_default",
+            "code_default"
+          ]
+        },
+        "thinking_off": {
+          "equal": false,
+          "first_diff_pos": 100,
+          "diff_tokens": 27,
+          "total_tokens": 128,
+          "prompts": [
+            "prose_nothink"
+          ]
+        },
+        "prompts": {
+          "prose_default": {
+            "equal": false,
+            "first_diff_pos": 93,
+            "diff_tokens": 35,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "on",
+            "plain_sha256": "a90621880581980443328abb100a8633218c5e327c7222f23c4143c06f04569b",
+            "cand_sha256": "2308a39039d3d31c52a0f691313c1cbe83ac119b58566679a9771d835e11bdde",
+            "plain_tg_tps": 17.04,
+            "cand_tg_tps": 29.29,
+            "cand_speculative": {
+              "rounds": 38,
+              "offered": 189,
+              "accepted": 90,
+              "kept_per_round": 2.368,
+              "tokens_per_round": 3.3684210526315788,
+              "acceptance_rate": 0.47619047619047616
+            }
+          },
+          "prose_nothink": {
+            "equal": false,
+            "first_diff_pos": 100,
+            "diff_tokens": 27,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "off",
+            "plain_sha256": "bec7946545f2f2d8110d65e1b64922a538d98f8739f0babbff3dad300f98c1f6",
+            "cand_sha256": "49afb54cea87d0808efb4ca3d83e14e4e46b2f1e42562729cb65f7e79d2a55f4",
+            "plain_tg_tps": 16.89,
+            "cand_tg_tps": 22.34,
+            "cand_speculative": {
+              "rounds": 54,
+              "offered": 219,
+              "accepted": 73,
+              "kept_per_round": 1.352,
+              "tokens_per_round": 2.3703703703703702,
+              "acceptance_rate": 0.3333333333333333
+            }
+          },
+          "code_default": {
+            "equal": false,
+            "first_diff_pos": 53,
+            "diff_tokens": 26,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "on",
+            "plain_sha256": "6aaa24678c888fd789f3018c7042c88ebb0e5013d8be360715204fddc7a6e383",
+            "cand_sha256": "2cf6f0567ab1c2e5ead0e381cacb1d35e08f09b00dfc44f3e06ca6d7dc80d13e",
+            "plain_tg_tps": 16.98,
+            "cand_tg_tps": 31.64,
+            "cand_speculative": {
+              "rounds": 35,
+              "offered": 175,
+              "accepted": 92,
+              "kept_per_round": 2.629,
+              "tokens_per_round": 3.657142857142857,
+              "acceptance_rate": 0.5257142857142857
+            }
+          }
+        }
+      }
+    },
+    {
+      "slot": "b23",
+      "trunk": "6b",
+      "drafter_plain": "none",
+      "drafter_drafted": "DFly2 6-bit",
+      "head": "fp32",
+      "layers": 78,
+      "context_window": 4096,
+      "transport": "stock",
+      "weight_bytes_plain": 80564717568,
+      "weights_gib_plain": 75.03,
+      "weight_bytes_drafted": 81433944196,
+      "weights_gib_drafted": 75.84,
+      "min_free_gib": 32.05,
+      "positions_scored": 192,
+      "overall_pct": 94.792,
+      "prose_pct": 92.708,
+      "code_pct": 96.875,
+      "both_match": 178,
+      "lossless_only": 2,
+      "cand_only": 4,
+      "neither": 8,
+      "delta_pts_vs_lossless": 1.042,
+      "within_1pt": true,
+      "plain_ms_per_tok": 65.1,
+      "plain_tg_tps": 15.36,
+      "draft_tg_tps": 25.97,
+      "draft_kept_per_round": 2.18,
+      "draft_tokens_per_round": 3.2,
+      "draft_diff": {
+        "all_equal": false,
+        "thinking_on": {
+          "equal": false,
+          "first_diff_pos": 53,
+          "diff_tokens": 91,
+          "total_tokens": 256,
+          "prompts": [
+            "prose_default",
+            "code_default"
+          ]
+        },
+        "thinking_off": {
+          "equal": false,
+          "first_diff_pos": 17,
+          "diff_tokens": 108,
+          "total_tokens": 128,
+          "prompts": [
+            "prose_nothink"
+          ]
+        },
+        "prompts": {
+          "prose_default": {
+            "equal": false,
+            "first_diff_pos": 110,
+            "diff_tokens": 18,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "on",
+            "plain_sha256": "96aceb8f673999aa0f79cbee15421fcbb4614def027ea0adc1bedd5f774fc331",
+            "cand_sha256": "1ae12e8e4d3f15aed218ba9562e0386ca87cab94a3fb999883d20e509cd872ef",
+            "plain_tg_tps": 15.39,
+            "cand_tg_tps": 25.04,
+            "cand_speculative": {
+              "rounds": 41,
+              "offered": 215,
+              "accepted": 86,
+              "kept_per_round": 2.098,
+              "tokens_per_round": 3.1219512195121952,
+              "acceptance_rate": 0.4
+            }
+          },
+          "prose_nothink": {
+            "equal": false,
+            "first_diff_pos": 17,
+            "diff_tokens": 108,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "off",
+            "plain_sha256": "c1a342e95b6a3ff9ba6e2c4bb0674fe7badc1f66b4ebb5248b3062807553ee09",
+            "cand_sha256": "a8ca3d12c8c861b4f4cc5c84eb53976df2e5c306f90a065e306433ce85c90ed4",
+            "plain_tg_tps": 15.31,
+            "cand_tg_tps": 21.69,
+            "cand_speculative": {
+              "rounds": 47,
+              "offered": 245,
+              "accepted": 80,
+              "kept_per_round": 1.702,
+              "tokens_per_round": 2.723404255319149,
+              "acceptance_rate": 0.32653061224489793
+            }
+          },
+          "code_default": {
+            "equal": false,
+            "first_diff_pos": 53,
+            "diff_tokens": 73,
+            "total_tokens": 128,
+            "plain_len": 128,
+            "draft_len": 128,
+            "thinking": "on",
+            "plain_sha256": "63da5ae8cbfc4c0963c0224075ab5e6f6067491f1e31fc3305024a9fc565501c",
+            "cand_sha256": "6aaa24678c888fd789f3018c7042c88ebb0e5013d8be360715204fddc7a6e383",
+            "plain_tg_tps": 15.25,
+            "cand_tg_tps": 32.04,
+            "cand_speculative": {
+              "rounds": 32,
+              "offered": 165,
+              "accepted": 95,
+              "kept_per_round": 2.969,
+              "tokens_per_round": 4.0,
+              "acceptance_rate": 0.5757575757575758
+            }
+          }
+        }
+      }
+    }
+  ]
+}

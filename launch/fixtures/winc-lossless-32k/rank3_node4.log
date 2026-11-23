@@ -1,0 +1,4 @@
+# Excerpt of the rank 3 log, the lossless 32K boot, lossless trunk at 32,768 tokens (2026-11-21): only the lines launch/collect_receipts.py reads.
+# Host names redacted to node1-node4 in rank order.
+node4:1:1 [0] NCCL INFO Using network IB
+info: Hy4 (hy_v4_vl, tp=4 rank=3) loaded in 75.43 s: 78 layers, 1 stream, 2.91 GiB lossless BF16 KV/stream at 32768 window, weights=83.72 GiB (weight_bytes=89891496068), room_after_reserve=17.95 GiB, trunk=lossless, drafter=DFly2 4-bit, head=fp32, repeat_stable=on

@@ -1,0 +1,52 @@
+{
+  "id": "m02_code_8k_tail",
+  "group": "main",
+  "kind": "code",
+  "tag": "fast-on",
+  "utc": "2026-11-22T22:22:48Z",
+  "model": "frozen-78l-dfly",
+  "max_tokens": 32,
+  "expected_rendered_tokens": 8351,
+  "prompt_tokens": 8351,
+  "completion_tokens": 20,
+  "finish_reason": "stop",
+  "wall_s": 20.692,
+  "content": "AUDIT_PORT=48219 | AUDIT_TAG=QUARTZ-77B",
+  "text_sha256": "7b9c118b0016b172fc6a1a70130f776b3d5d8b181bca520dd68c02a76a3b5299",
+  "token_ids": [
+    32,
+    13635,
+    2377,
+    49662,
+    28,
+    32974,
+    627,
+    368,
+    360,
+    13635,
+    2377,
+    78129,
+    28,
+    13701,
+    8674,
+    57,
+    12,
+    4242,
+    33,
+    120025
+  ],
+  "token_sha256": "5a3d022542a05506faa90472870a2394d8b8c6e38fd518d80a2a28e4c4785ebe",
+  "facts": [
+    {
+      "key": "AUDIT_PORT",
+      "expected": "48219",
+      "right": true
+    },
+    {
+      "key": "AUDIT_TAG",
+      "expected": "QUARTZ-77B",
+      "right": true
+    }
+  ],
+  "loop_or_broken": null
+}

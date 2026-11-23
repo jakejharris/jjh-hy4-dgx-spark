@@ -1,0 +1,44 @@
+# launch/STAGING.md ("Per-Spark parts", commit 913b06a), tar lines 1 and 2 as written, for the drafter folder only,
+# from node1 over one cable each to node2 (STAGE_CABLE_HOP1_IP) and node3 (STAGE_CABLE_PULL_IP), extracted into
+# a scratch folder (tar-test) in place of /data/models, then the in-place check on both copies, then the scratch
+# folders removed. Line 3 (through rank 1 to rank 2) did not run: rank 2 was off after a power cut.
+# The run's own log, unchanged except home folders written ~ and the Sparks named node1 to node4.
+2026-11-21T23:15:29Z === PRE-CHECK ROUTES AND SCRATCH PATHS ===
+192.168.101.10 dev enp1s0f1np1 src 192.168.101.1 uid 1000 
+192.168.102.11 dev enp1s0f0np0 src 192.168.102.1 uid 1000 
+node2 BEFORE_DF=/dev/nvme0n1p2 4031871553536 3012107235328 814923468800  79% /
+node3 BEFORE_DF=/dev/nvme0n1p2 4031871553536 3656717606912 170313097216  96% /
+
+2026-11-21T23:15:30Z === LINE 1: STAGING TAR node1 -> node2 (192.168.101.10) ===
+TAR_node2_WALL_S=7.839
+
+2026-11-21T23:15:39Z === LINE 2: STAGING TAR node1 -> node3 (192.168.102.11) ===
+TAR_node3_WALL_S=8.038
+
+2026-11-21T23:15:47Z === IN-PLACE CHECKS ON TAR-TEST COPIES ===
+--- CHECK node2:~/hy4/int/tar-test/drafter-4b ---
+node2 DURING_DF=/dev/nvme0n1p2 4031871553536 3020673658880 806357045248  79% /
+== checking ~/hy4/int/tar-test/drafter-4b in place
+OK      config.json
+OK      model-00245-of-00245.safetensors
+OK      trunk-4b/dfly_layers.safetensors
+OK      trunk-4b/lm_head.safetensors
+OK      trunk-4b/trunk.index.json
+drafter folder ~/hy4/int/tar-test/drafter-4b: 5 files, 8566396282 bytes, each equal to launch/weights.sha256; set DRAFTER_DIR="~/hy4/int/tar-test/drafter-4b"
+CHECK_node2_WALL_S=4.063
+--- CHECK node3:~/hy4/int/tar-test/drafter-4b ---
+node3 DURING_DF=/dev/nvme0n1p2 4031871553536 3665284030464 161746673664  96% /
+== checking ~/hy4/int/tar-test/drafter-4b in place
+OK      config.json
+OK      model-00245-of-00245.safetensors
+OK      trunk-4b/dfly_layers.safetensors
+OK      trunk-4b/lm_head.safetensors
+OK      trunk-4b/trunk.index.json
+drafter folder ~/hy4/int/tar-test/drafter-4b: 5 files, 8566396282 bytes, each equal to launch/weights.sha256; set DRAFTER_DIR="~/hy4/int/tar-test/drafter-4b"
+CHECK_node3_WALL_S=3.980
+
+2026-11-21T23:15:56Z === CLEANUP ONLY ~/hy4/int/tar-test ON node2 AND node3 ===
+node2 AFTER_CLEAN_DF=/dev/nvme0n1p2 4031871553536 3012107239424 814923464704  79% / tar_test_removed=yes drafter_4b_intact=yes docker=0
+node3 AFTER_CLEAN_DF=/dev/nvme0n1p2 4031871553536 3656717611008 170313093120  96% / tar_test_removed=yes drafter_4b_intact=yes docker=0
+node1 docker=0 drafter_4b_intact=yes
+2026-11-21T23:15:59Z === ALL_DONE ===

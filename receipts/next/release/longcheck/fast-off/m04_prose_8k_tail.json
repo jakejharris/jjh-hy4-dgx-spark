@@ -1,0 +1,51 @@
+{
+  "id": "m04_prose_8k_tail",
+  "group": "main",
+  "kind": "prose",
+  "tag": "fast-off",
+  "utc": "2026-11-22T22:34:39Z",
+  "model": "frozen-78l-dfly",
+  "max_tokens": 32,
+  "expected_rendered_tokens": 8360,
+  "prompt_tokens": 8360,
+  "completion_tokens": 19,
+  "finish_reason": "stop",
+  "wall_s": 56.111,
+  "content": "LEDGER_ID=OP-9042 | CHECK_HASH=F4C8E19A",
+  "text_sha256": "37a5708a6b5ee1b65800fced6988086887d9a27cfb8d5ade4f386a9a199f35f6",
+  "token_ids": [
+    12293,
+    23222,
+    14099,
+    28,
+    6765,
+    12,
+    37039,
+    17,
+    368,
+    40010,
+    115014,
+    50541,
+    19,
+    34,
+    23,
+    36,
+    627,
+    32,
+    120025
+  ],
+  "token_sha256": "686305f2d8dcf21e3ee131392346295af205f35e6329af5d513355cae0804e4d",
+  "facts": [
+    {
+      "key": "LEDGER_ID",
+      "expected": "OP-9042",
+      "right": true
+    },
+    {
+      "key": "CHECK_HASH",
+      "expected": "F4C8E19A",
+      "right": true
+    }
+  ],
+  "loop_or_broken": null
+}

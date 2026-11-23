@@ -1,0 +1,160 @@
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Reply with exactly one digit: What is 2 + 2?"
+    }
+  ],
+  "render_options": {
+    "add_generation_prompt": true,
+    "add_special_tokens": false
+  },
+  "renders": {
+    "high": {
+      "id": "high",
+      "kwargs": {
+        "reasoning_effort": "high"
+      },
+      "rendered": "<｜hy_start:opensource｜>system<｜hy_middle:opensource｜><｜reasoning_mode:opensource｜>reasoning_effort:high<｜hy_end:opensource｜><｜hy_start:opensource｜>user<｜hy_middle:opensource｜>Reply with exactly one digit: What is 2 + 2?<｜hy_end:opensource｜><｜hy_start:opensource｜>assistant<｜hy_middle:opensource｜><think:opensource>",
+      "input_ids": [
+        120000,
+        13251,
+        120001,
+        120039,
+        59785,
+        287,
+        62,
+        4138,
+        506,
+        25,
+        19369,
+        120025,
+        120000,
+        3717,
+        120001,
+        37614,
+        430,
+        8099,
+        936,
+        17067,
+        25,
+        3477,
+        341,
+        220,
+        17,
+        803,
+        220,
+        17,
+        30,
+        120025,
+        120000,
+        611,
+        10372,
+        120001,
+        120029
+      ],
+      "score_positions_1based": [
+        35
+      ]
+    },
+    "no_think": {
+      "id": "no_think",
+      "kwargs": {
+        "reasoning_effort": "no_think"
+      },
+      "rendered": "<｜hy_start:opensource｜>system<｜hy_middle:opensource｜><｜reasoning_mode:opensource｜>reasoning_effort:no_think<｜hy_end:opensource｜><｜hy_start:opensource｜>user<｜hy_middle:opensource｜>Reply with exactly one digit: What is 2 + 2?<｜hy_end:opensource｜><｜hy_start:opensource｜>assistant<｜hy_middle:opensource｜><think:opensource></think:opensource>",
+      "input_ids": [
+        120000,
+        13251,
+        120001,
+        120039,
+        59785,
+        287,
+        62,
+        4138,
+        506,
+        25,
+        3202,
+        32980,
+        1121,
+        120025,
+        120000,
+        3717,
+        120001,
+        37614,
+        430,
+        8099,
+        936,
+        17067,
+        25,
+        3477,
+        341,
+        220,
+        17,
+        803,
+        220,
+        17,
+        30,
+        120025,
+        120000,
+        611,
+        10372,
+        120001,
+        120029,
+        120030
+      ],
+      "score_positions_1based": [
+        38
+      ]
+    },
+    "legacy_false": {
+      "id": "legacy_false",
+      "kwargs": {
+        "enable_thinking": false
+      },
+      "rendered": "<｜hy_start:opensource｜>system<｜hy_middle:opensource｜><｜reasoning_mode:opensource｜>reasoning_effort:high<｜hy_end:opensource｜><｜hy_start:opensource｜>user<｜hy_middle:opensource｜>Reply with exactly one digit: What is 2 + 2?<｜hy_end:opensource｜><｜hy_start:opensource｜>assistant<｜hy_middle:opensource｜><think:opensource>",
+      "input_ids": [
+        120000,
+        13251,
+        120001,
+        120039,
+        59785,
+        287,
+        62,
+        4138,
+        506,
+        25,
+        19369,
+        120025,
+        120000,
+        3717,
+        120001,
+        37614,
+        430,
+        8099,
+        936,
+        17067,
+        25,
+        3477,
+        341,
+        220,
+        17,
+        803,
+        220,
+        17,
+        30,
+        120025,
+        120000,
+        611,
+        10372,
+        120001,
+        120029
+      ],
+      "score_positions_1based": [
+        35
+      ]
+    }
+  },
+  "answer_id": 19,
+  "leading_space_id": 220
+}

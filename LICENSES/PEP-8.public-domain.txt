@@ -1,0 +1,9 @@
+PEP 8: Style Guide for Python Code
+Source: https://raw.githubusercontent.com/python/peps/main/peps/pep-0008.rst
+sha256 of that file when read: 6028935c6cb2c674d5f4d512c7ba6ce2923713b1c47ce1a78adc690db817fc5d
+The python/peps repository has no license file; each PEP states its own terms. PEP 8's section, verbatim:
+
+Copyright
+=========
+
+This document has been placed in the public domain.

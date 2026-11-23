@@ -1,0 +1,17 @@
+COMPARE base=fast-off cand=fast-on verdict=PASS
+ID                   GRP          1ST   F8    TOK_EQ DIFF@ FACTS(B->C)        BROKEN(C)
+m01_code_8k          main          OK   OK  32/32        -           -                -
+m02_code_8k_tail     main          OK   OK  20/20        -    2/2->2/2                -
+m03_prose_8k         main          OK   OK  32/32        -           -                -
+m04_prose_8k_tail    main          OK   OK  19/19        -    2/2->2/2                -
+m05_facts_8k_api     main          OK   OK  25/25        -    3/3->3/3                -
+m06_facts_8k_hy4     main          OK   OK  32/32        -    3/3->3/3                -
+m07_prose_8k_run     main        DIFF DIFF   0/32        0           -                -
+m08_facts_8k_kit     main          OK   OK  29/29        -    3/3->3/3                -
+m09_code_32k         main          OK   OK  32/32        -    3/3->3/3                -
+m10_prose_32k        main          OK   OK  29/29        -    3/3->3/3                -
+c01_handoff_2100     correctness   OK   OK  23/54       23    2/2->2/2                -
+c02_prune_6k         correctness   OK   OK  21/64       21    2/2->2/2                -
+c03_merge_20k        correctness   OK   OK  64/64        -    3/3->3/3                -
+main first-token agreement: 9/10 (blocks < 9/10)
+correctness first-8 diffs:  0/3 (blocks >= 2/3)

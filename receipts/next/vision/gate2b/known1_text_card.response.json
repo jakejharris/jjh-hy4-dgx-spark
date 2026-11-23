@@ -1,0 +1,26 @@
+{
+  "wall_s": 25.5033,
+  "ttft_s": 2.6102,
+  "decode_s": 22.8931,
+  "prompt_tokens": 444,
+  "completion_tokens": 573,
+  "prefill_tok_s": 170.1,
+  "decode_tok_s": 24.99,
+  "finish_reason": "stop",
+  "combined_sha256": "e3019f493969a08acf763c139f1468df0e78c4c06eebabbc42eca953278d7760",
+  "usage": {
+    "prompt_tokens": 444,
+    "completion_tokens": 573,
+    "total_tokens": 1017,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 547
+    }
+  },
+  "timings": {},
+  "reasoning_content": "We need answer exact code, port, status from image. Need inspect carefully. Image text pixel font. Need parse. Top: \"CODE: KESTREL-4729\" perhaps. Need exact. Middle red: \"PORT: 18080\" likely. Bottom green: \"STATUS: READY\". Need ensure code maybe KESTREL-4729. Let's zoom mentally / use image dimensions. Top line visible: CODE: KESTREL-4729. Need exact code perhaps \"KESTREL-4729\". Let's inspect glyphs. Top after KESTREL: hyphen then 4729. Yes. Middle red digits: 18080? Need distinguish stylized 8 and 0. It reads \"18080\" likely. Let's carefully parse pixel font.\n\nImage:\nCODE: KESTREL-4729\nPORT: 18080\nSTATUS: READY\n\nNeed perhaps code is \"KESTREL-4729\" and port \"18080\", status \"READY\". Let's ensure first digit sequence. Red text after colon: glyphs:\n- first looks like \"1\": vertical stem with perhaps top serif? At x~340.\n- second looks like \"8\": pixelated two loops? Actually shown \"1 8 0 8 0\" perhaps.\nLet's map visual: red string from x340 to 548. Characters likely 5 digits, each ~38 px wide with spacing ~5. Looking at image: \"18080\". The second glyph at x~378-414 appears like 8 (top and bottom loops, central bar). Third at x~421-457 appears like 0 (outline rectangle with maybe diagonal? Wait pixel font). Fourth x~464-500 appears like 8. Fifth x~507-543 appears like 0. The displayed text in prompt visually says \"18080\" indeed. Need answer concise perhaps labels.\n\nNeed be exact including hyphen. Could mention:\nCode: KESTREL-4729\nPort: 18080\nStatus: READY\n\nLet's ensure top code maybe \"KESTREL-4729\" where 4 glyph is unusual (looks like -4? Actually text shown \"KESTREL\u22124729\"). Let's inspect top: after L, there is a long horizontal dash at y~111 from x638 to676, then glyph \"4\" from x680-716 perhaps. The image transcription in visual itself: \"KESTREL-4729\". Yes.\n\nCould there be code \"KESTREL-4729\" with a long dash? Exact likely hyphen. Need perhaps preserve case. Answer no extra.",
+  "content": "- **Code:** KESTREL-4729\n- **Port:** 18080\n- **Status:** READY",
+  "sse_events": 253
+}

@@ -1,0 +1,2 @@
+[tensorfold] done chatcmpl-01e291ff0971f88fe38b907ba655d769 prompt=325 cached=0 thinking=False effort=none tokens=21 sha=a528c5341442 finish=stop rounds=6 calls=6 offered=22 accepted=16/22 ttft=1.605 decode=0.595 elapsed=2.200 queued=0.000 tok/s=33.6
+[tensorfold] done chatcmpl-8fe5c58352d8ab39de912bafa83cbf91 prompt=325 cached=0 thinking=False effort=none tokens=21 sha=7c3112e28546 finish=stop rounds=20 accepted=0/0 ttft=1.600 decode=1.190 elapsed=2.790 queued=0.000 tok/s=16.8

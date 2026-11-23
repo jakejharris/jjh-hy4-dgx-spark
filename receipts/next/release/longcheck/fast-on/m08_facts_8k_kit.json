@@ -1,0 +1,66 @@
+{
+  "id": "m08_facts_8k_kit",
+  "group": "main",
+  "kind": "facts",
+  "tag": "fast-on",
+  "utc": "2026-11-22T22:24:50Z",
+  "model": "frozen-78l-dfly",
+  "max_tokens": 32,
+  "expected_rendered_tokens": 8227,
+  "prompt_tokens": 8227,
+  "completion_tokens": 29,
+  "finish_reason": "stop",
+  "wall_s": 20.5,
+  "content": "KIT_LOT=LOT-307 | THERM_CEIL=74C | PACK_SEAL=AMBER-612",
+  "text_sha256": "fc0827147a57007907f07cfa2afbc75c236147ab2f38d542913e8ef73e1cc37a",
+  "token_ids": [
+    42,
+    2377,
+    8039,
+    3797,
+    72440,
+    3797,
+    12,
+    21076,
+    368,
+    344,
+    10105,
+    44,
+    4864,
+    36,
+    4649,
+    28,
+    7102,
+    34,
+    368,
+    400,
+    11046,
+    20767,
+    2188,
+    28,
+    3003,
+    18780,
+    12,
+    30828,
+    120025
+  ],
+  "token_sha256": "7ef32ea001e3be089b14af9ef57dd7f6e98b5c85b738d09f531629ab27732eeb",
+  "facts": [
+    {
+      "key": "KIT_LOT",
+      "expected": "LOT-307",
+      "right": true
+    },
+    {
+      "key": "THERM_CEIL",
+      "expected": "74C",
+      "right": true
+    },
+    {
+      "key": "PACK_SEAL",
+      "expected": "AMBER-612",
+      "right": true
+    }
+  ],
+  "loop_or_broken": null
+}

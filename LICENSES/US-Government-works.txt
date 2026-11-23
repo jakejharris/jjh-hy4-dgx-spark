@@ -1,0 +1,25 @@
+Works of the United States Government (prefix set `fresh`)
+
+These sources are works of the U.S. Government and are not under copyright (17 U.S.C. 105).
+There is no license file to copy. For each agency, the sentence its own page gives and the page,
+as recorded in eval/prefixes/fresh/manifest.json by the license audit of 2026-11-21:
+
+- https://science.nasa.gov/earth/earth-observatory/
+  "NASA Earth Observatory (under NASA Science): NASA content is generally not subject to copyright in the United States unless noted."
+  sources: nasa_12, nasa_wp_20, nasa_wp_23
+
+- https://www.eia.gov/about/copyrights_reuse.php
+  "U.S. government publications are in the public domain and are not subject to copyright protection."
+  sources: eia_01, eia_02, eia_05, eia_06, eia_68484, eia_68444, eia_68425
+
+- https://www.federalregister.gov/reader-aids/office-of-the-federal-register-announcements/copyright-and-public-domain
+  "Works of the U.S. Government (17 U.S.C. 105) published in the Federal Register are in the public domain."
+  sources: fr_2026_23711, fr_2026_23706, fr_2026_23669, fr_2026_23728
+
+- https://www.nasa.gov/nasa-brand-center/images-and-media/
+  "NASA content – images, audio, video, and media files ... – generally are not subject to copyright in the United States."
+  sources: nasa_08, nasa_09, nasa_14, nasa_wp_13, nasa_wp_14, nasa_wp_15, nasa_wp_16, nasa_wp_17, nasa_wp_18, nasa_wp_19, nasa_wp_21, nasa_wp_22, nasa_wp_24, nasa_wp_25
+
+- https://www.nist.gov/copyrights-disclaimers
+  "With the exception of material marked as copyrighted, information presented on NIST sites are considered public information and may be distributed or copied."
+  sources: nist_17, nist_18, nist_19

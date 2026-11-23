@@ -1,0 +1,16 @@
+{
+  "definition": {
+    "reference_next_token_accuracy": "share of positions where the reference's greedy pick equals the next token of the published text (picks[:, :-1] == input_ids[:, 1:])",
+    "close_calls": "share of positions where the reference's top-two logit gap (margin) is under 0.5"
+  },
+  "prefixes": 96,
+  "seq_len": 384,
+  "reference_next_token_accuracy_prose_pct": 54.94,
+  "close_calls_prose_pct": 22.02,
+  "reference_next_token_accuracy_code_pct": 75.94,
+  "close_calls_code_pct": 12.45,
+  "reference_next_token_accuracy_pct": 65.44,
+  "close_calls_pct": 17.23,
+  "close_calls": 6353,
+  "positions": 36864
+}

@@ -1,0 +1,69 @@
+{
+  "id": "m09_code_32k",
+  "group": "main",
+  "kind": "code",
+  "tag": "fast-off",
+  "utc": "2026-11-22T22:42:26Z",
+  "model": "frozen-78l-dfly",
+  "max_tokens": 32,
+  "expected_rendered_tokens": 32779,
+  "prompt_tokens": 32779,
+  "completion_tokens": 32,
+  "finish_reason": "stop",
+  "wall_s": 243.334,
+  "content": "CODE_SLOT_A=COBALT-108 | CODE_SLOT_B=4096-FP32 | CODE_SLOT_C=ONYX-992",
+  "text_sha256": "2aafd636e870a97ab02b34a84ce5adf013928f769a8e9c83dc5867f76dfc912a",
+  "token_ids": [
+    35302,
+    83764,
+    3797,
+    11993,
+    28,
+    3339,
+    33,
+    47251,
+    12,
+    7917,
+    368,
+    53304,
+    83764,
+    3797,
+    6458,
+    28,
+    18714,
+    21,
+    7549,
+    47,
+    1904,
+    368,
+    53304,
+    83764,
+    3797,
+    4864,
+    28,
+    82920,
+    55,
+    12,
+    39441,
+    120025
+  ],
+  "token_sha256": "347fb123fe88a28f52ee39c0de0749ee66640592073fa7640df7afab06306c6e",
+  "facts": [
+    {
+      "key": "CODE_SLOT_A",
+      "expected": "COBALT-108",
+      "right": true
+    },
+    {
+      "key": "CODE_SLOT_B",
+      "expected": "4096-FP32",
+      "right": true
+    },
+    {
+      "key": "CODE_SLOT_C",
+      "expected": "ONYX-992",
+      "right": true
+    }
+  ],
+  "loop_or_broken": null
+}

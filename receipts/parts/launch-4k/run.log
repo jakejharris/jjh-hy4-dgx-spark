@@ -1,0 +1,29 @@
+ASSERT_BOOT PASS mode=serve ranks=4/4 layers=78 trunk=4b6b drafter=DFly2 4-bit head=fp32 ctx=4096 transport=relay min_free_gib=None
+Serving model id: hy4-exl3
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-ka] run 1/1: pp=43.79 tok/s, tg=31.92 tok/s, ttft=1.1874s
+CHECK_ANSWER PASS: known-answer matched 391/Tokyo/Au ('391; Tokyo; Au.')
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-plain-thinkon-prose] run 1/3: drafts=False pp=129.25 tok/s, tg=18.2 tok/s, pred_n=128, sha=a90621880581
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-plain-thinkon-prose] run 2/3: drafts=False pp=128.28 tok/s, tg=18.28 tok/s, pred_n=128, sha=a90621880581
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-plain-thinkon-prose] run 3/3: drafts=False pp=126.04 tok/s, tg=18.3 tok/s, pred_n=128, sha=a90621880581
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-plain-nothink-prose] run 1/1: drafts=False pp=130.33 tok/s, tg=18.11 tok/s, pred_n=128, sha=bec7946545f2
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-plain-thinkon-code] run 1/1: drafts=False pp=130.63 tok/s, tg=18.15 tok/s, pred_n=128, sha=6aaa24678c88
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-plain-thinkon-pp4k] run 1/1: drafts=False pp=175.29 tok/s, tg=15.28 tok/s, pred_n=32, sha=9e9da72913b4
+TOKEN_DIFF [prose_default] thinking=on equal=True first_diff=None diff=0/128 plain_tg=17.68 cand_tg=18.2 sha_match=True
+TOKEN_DIFF [prose_nothink] thinking=off equal=True first_diff=None diff=0/128 plain_tg=17.56 cand_tg=18.11 sha_match=True
+TOKEN_DIFF [code_default] thinking=on equal=True first_diff=None diff=0/128 plain_tg=17.64 cand_tg=18.15 sha_match=True
+TOKEN_DIFF [pp4k_default] thinking=on equal=True first_diff=None diff=0/32 plain_tg=14.88 cand_tg=15.28 sha_match=True
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-dfly-thinkon-prose] run 1/3: pp=125.38 tok/s, tg=35.58 tok/s, ttft=0.4546s
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-dfly-thinkon-prose] run 2/3: pp=126.41 tok/s, tg=35.66 tok/s, ttft=0.4509s
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-dfly-thinkon-prose] run 3/3: pp=124.99 tok/s, tg=35.56 tok/s, ttft=0.4561s
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-dfly-nothink-prose] run 1/1: pp=128.6 tok/s, tg=25.9 tok/s, ttft=0.4666s
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-dfly-thinkon-code] run 1/3: pp=129.84 tok/s, tg=39.02 tok/s, ttft=0.4852s
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-dfly-thinkon-code] run 2/3: pp=132.28 tok/s, tg=38.88 tok/s, ttft=0.4763s
+[winD-parts-78l-4b6b-4k-dfly4b-relay-rs1-dfly-thinkon-code] run 3/3: pp=134.02 tok/s, tg=39.2 tok/s, ttft=0.4701s
+REPEAT_CHECK plain_prose : med=18.28 tgs=[18.2, 18.28, 18.3] tok_eq=True offs=[0, 0, 0]
+REPEAT_CHECK dfly_prose  : med=35.58 tgs=[35.58, 35.66, 35.56] tok_eq=True offs=[162, 162, 162]
+REPEAT_CHECK dfly_code   : med=39.02 tgs=[39.02, 38.88, 39.2] tok_eq=True offs=[152, 152, 152]
+TOKEN_DIFF [prose_default] thinking=on equal=True first_diff=None diff=0/128 plain_tg=34.58 cand_tg=35.58 sha_match=True
+TOKEN_DIFF [prose_nothink] thinking=off equal=True first_diff=None diff=0/128 plain_tg=24.97 cand_tg=25.9 sha_match=True
+TOKEN_DIFF [code_default] thinking=on equal=True first_diff=None diff=0/128 plain_tg=37.95 cand_tg=39.02 sha_match=True
+ASSERT_BOOT PASS mode=serve ranks=4/4 layers=78 trunk=4b6b drafter=DFly2 4-bit head=fp32 ctx=4096 transport=relay min_free_gib=37.23
+D01_DONE plain_rc=0 dfly_rc=0

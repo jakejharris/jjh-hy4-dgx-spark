@@ -1,0 +1,16 @@
+[1.70m] bootA_missing_decoder_warnings rc=1
+[2.85m] bootA_vision_check rc=0
+[2.85m] bootA_https_url_probe rc=0
+[3.20m] bootA_rig_codec_gate rc=0
+[11.05m] bootA_decode_match rc=0
+[11.18m] bootA_gate_mixed_fast_on rc=0
+[17.78m] bootA_longcheck_fast_on rc=0
+[17.87m] bootA_collect_receipts rc=0
+[19.82m] bootB_gate_mixed_draft_on rc=0
+[19.98m] bootB_gate_mixed_draft_off rc=0
+[38.93m] bootB_longcheck_fast_off rc=0
+[39.00m] bootB_collect_receipts rc=0
+[39.00m] longcheck_compare rc=0
+[39.02m] check_mixed rc=0
+[48.37m] bootC_rigmark_bf16 rc=0
+[48.48m] bootC_collect_receipts rc=0

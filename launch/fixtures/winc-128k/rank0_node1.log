@@ -1,0 +1,6 @@
+# Excerpt of the rank 0 log, the 128K boot, full quant 4b6b at 131,072 tokens (2026-11-21): only the lines launch/collect_receipts.py reads.
+# Host names redacted to node1-node4 in rank order.
+node1:1:1 [0] NCCL INFO Using network IB
+[tensorfold] CUDA sm_121 device 0 (NVIDIA GB10, memory shared with the host): model 87.29 GiB; 1 stream at once, 11.63 GiB each at a 131072-token window, of 14.2 GiB left after a 12.2 GiB reserve; prompts in passes of up to 1024 rows, no prompt cache; own glue kernels
+[tensorfold] serving frozen-78l-dfly at http://0.0.0.0:18080/v1 (sampling: temperature 0.9, top_k -1, top_p 1; drafts: DFly2; context: 131072; loaded in 80.2s)
+info: Hy4 (hy_v4_vl, tp=4 rank=0) loaded in 76.12 s: 78 layers, 1 stream, 11.63 GiB lossless BF16 KV/stream at 131072 window, weights=75.22 GiB (weight_bytes=80764690564), room_after_reserve=26.00 GiB, trunk=4b6b, drafter=DFly2 4-bit, head=fp32, repeat_stable=on

@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+launch/ring.env
+results/
+artifacts/
+logs/
