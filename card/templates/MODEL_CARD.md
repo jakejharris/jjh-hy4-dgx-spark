@@ -3,6 +3,7 @@ license: other
 license_name: tencent-hy-license
 license_link: LICENSE
 base_model: tencent/Hy4
+base_model_relation: quantized
 ---
 
 <p align="center">
