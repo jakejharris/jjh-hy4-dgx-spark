@@ -1,6 +1,6 @@
 # Direct-Cabled Ring RDMA (`NCCL` / RoCEv2)
 
-This note covers 2-node to 4-node clusters wired with direct 200 Gb/s copper cables and no switch, where stock NCCL 2.30.7 either dies in the first collective or falls back to slow `NET/Socket`.
+This note covers 2-node to 4-node clusters wired with direct 200 Gb/s copper cables and no switch, where stock NCCL 2.30.7 either dies in the first collective or falls back to slow `NET/Socket`. For four Sparks on one switch, see [SWITCH.md](SWITCH.md).
 
 ## Symptoms in the log
 

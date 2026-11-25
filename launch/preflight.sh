@@ -44,6 +44,33 @@ if [[ "$TIMED_RUN" == "1" || "$RUN_PROBE" -eq 1 ]]; then
   fi
 fi
 
+# Fabric: "0" (the default) is the cabled ring this kit was measured on. "1" is a switch that every Spark reaches on
+# the same two interfaces (launch/SWITCH.md).
+SWITCH_FABRIC="${SWITCH_FABRIC:-0}"
+if [[ "$SWITCH_FABRIC" != "0" && "$SWITCH_FABRIC" != "1" ]]; then
+  echo "FAIL: SWITCH_FABRIC=\"${SWITCH_FABRIC}\"; use \"0\" (cabled ring, the default) or \"1\" (switch)." >&2
+  exit 2
+fi
+RAILS=("-" "-")
+if [[ "$SWITCH_FABRIC" == "1" ]]; then
+  read -r -a RAILS <<< "${SWITCH_RAILS:-enp1s0f0np0 enP2p1s0f0np0}"
+  if [[ ${#RAILS[@]} -ne 2 || "${RAILS[0]}" == "${RAILS[1]}" ]]; then
+    echo "FAIL: SWITCH_RAILS must name two different network interfaces, got \"${SWITCH_RAILS:-}\"" >&2
+    exit 2
+  fi
+  for rail in "${RAILS[@]}"; do
+    if [[ ! "$rail" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+      echo "FAIL: SWITCH_RAILS: \"${rail}\" is not a network interface name" >&2
+      exit 2
+    fi
+  done
+  if [[ "${TF_TP_ROCE_RELAY:-}" == "1" ]]; then
+    echo "FAIL: SWITCH_FABRIC=\"1\" with the relay on. The relay takes a four-rank ring without a direct path between opposite" >&2
+    echo "      ranks; on a switch there is one. Leave out launch/ring.relay.env.example (launch/SWITCH.md)." >&2
+    exit 2
+  fi
+fi
+
 read -r -a HOSTS <<< "${RING_HOSTS:-}"
 CHECK_RANKS=4
 if [[ "$RUN_PROBE" -eq 1 ]]; then
@@ -89,12 +116,15 @@ for ((r = 0; r < CHECK_RANKS; r++)); do
   fi
 
   # Do NOT pass -n here: ssh must feed the heredoc on stdin to remote bash -s.
-  out="$(ssh -o BatchMode=yes -o ConnectTimeout=8 "$h" bash -s -- "$MODEL_PATH" "$CHECK_MIN_GIB" "$IMG" "$RUN_PROBE" <<'EOF'
+  out="$(ssh -o BatchMode=yes -o ConnectTimeout=8 "$h" bash -s -- "$MODEL_PATH" "$CHECK_MIN_GIB" "$IMG" "$RUN_PROBE" "$SWITCH_FABRIC" "${RAILS[0]}" "${RAILS[1]}" <<'EOF'
 set -euo pipefail
 MODEL_PATH="$1"
 MIN_GIB="$2"
 IMG="$3"
 IS_PROBE="$4"
+SWITCH="$5"
+RAIL0="$6"
+RAIL1="$7"
 
 # 1. RDMA devices present
 if [[ ! -d /sys/class/infiniband ]] || [[ -z "$(ls -A /sys/class/infiniband 2>/dev/null)" ]]; then
@@ -103,14 +133,28 @@ if [[ ! -d /sys/class/infiniband ]] || [[ -z "$(ls -A /sys/class/infiniband 2>/d
 fi
 devs="$(ls /sys/class/infiniband | tr '\n' ',')"
 
-# 2. Cable interfaces with IPv4 addresses (enp1s0f*)
-subnets="$(ip -o -4 addr show | awk '$2 ~ /^enp1s0f/ {print $2 "=" $4}' | tr '\n' ' ')"
+# 2. Cable interfaces with IPv4 addresses (enp1s0f*), or with a switch the two rails by name (f0 and f1 below are then
+#    the first and the second rail)
+if [[ "$SWITCH" == "1" ]]; then
+  subnets="$(ip -o -4 addr show | awk -v a="$RAIL0" -v b="$RAIL1" '$2 == a || $2 == b {print $2 "=" $4}' | tr '\n' ' ')"
+else
+  subnets="$(ip -o -4 addr show | awk '$2 ~ /^enp1s0f/ {print $2 "=" $4}' | tr '\n' ' ')"
+fi
 if [[ -z "$subnets" ]]; then
   echo "ERR:no_cable_subnets"
   exit 1
 fi
-f0_cidr="$(ip -o -4 addr show | awk '$2 ~ /^enp1s0f0/ {print $4; exit}')"
-f1_cidr="$(ip -o -4 addr show | awk '$2 ~ /^enp1s0f1/ {print $4; exit}')"
+if [[ "$SWITCH" == "1" ]]; then
+  f0_cidr="$(ip -o -4 addr show | awk -v d="$RAIL0" '$2 == d {print $4; exit}')"
+  f1_cidr="$(ip -o -4 addr show | awk -v d="$RAIL1" '$2 == d {print $4; exit}')"
+else
+  f0_cidr="$(ip -o -4 addr show | awk '$2 ~ /^enp1s0f0/ {print $4; exit}')"
+  f1_cidr="$(ip -o -4 addr show | awk '$2 ~ /^enp1s0f1/ {print $4; exit}')"
+fi
+if [[ "$SWITCH" == "1" && ( -z "$f0_cidr" || -z "$f1_cidr" ) ]]; then
+  echo "ERR:missing_switch_rails:${RAIL0}=${f0_cidr:-none},${RAIL1}=${f1_cidr:-none}"
+  exit 1
+fi
 if [[ -z "$f0_cidr" || -z "$f1_cidr" ]]; then
   echo "ERR:missing_cable_ports:f0=${f0_cidr:-none},f1=${f1_cidr:-none}"
   exit 1
@@ -189,12 +233,48 @@ if [[ "${SERVE_VISION:-0}" == "1" && "$RUN_PROBE" -eq 0 ]]; then
   echo "  OK: $(printf '%s\n' "$vis_out" | grep -c ': OK$') vision files match launch/vision.sha256"
 fi
 
+# 7a. Switch: on each rail, every rank must share one /24 with every other rank and reach it without a gateway through
+#     that rail's own interface, and the two rails must be separate /24s.
+if [[ "$SWITCH_FABRIC" == "1" ]]; then
+  SWITCH_FAIL=0
+  for ((r = 0; r < CHECK_RANKS; r++)); do
+    if [[ "${RANK_F0_SUB[$r]}" == "${RANK_F1_SUB[$r]}" ]]; then
+      echo "FAIL-CLOSED: rank ${r} (${HOSTS[$r]}) has both rails in ${RANK_F0_SUB[$r]}.0/24; use one /24 per rail" >&2
+      SWITCH_FAIL=1
+    fi
+    for ((q = 0; q < CHECK_RANKS; q++)); do
+      [[ "$r" -ne "$q" ]] || continue
+      for rail in 0 1; do
+        if [[ "$rail" -eq 0 ]]; then
+          src_sub="${RANK_F0_SUB[$r]}"; dst_sub="${RANK_F0_SUB[$q]}"; dst_ip="${RANK_F0_IP[$q]}"
+        else
+          src_sub="${RANK_F1_SUB[$r]}"; dst_sub="${RANK_F1_SUB[$q]}"; dst_ip="${RANK_F1_IP[$q]}"
+        fi
+        if [[ "$src_sub" != "$dst_sub" ]]; then
+          echo "FAIL-CLOSED: rail ${RAILS[$rail]}: rank ${r} (${HOSTS[$r]}, ${src_sub}.0/24) and rank ${q} (${HOSTS[$q]}, ${dst_sub}.0/24) are in different subnets" >&2
+          SWITCH_FAIL=1
+          continue
+        fi
+        route_line="$(ssh -n -o BatchMode=yes -o ConnectTimeout=8 "${HOSTS[$r]}" "ip route get ${dst_ip} | head -1" 2>/dev/null || echo "route_error")"
+        if [[ " ${route_line} " != *" dev ${RAILS[$rail]} "* || "$route_line" == *" via "* ]]; then
+          echo "FAIL-CLOSED: rank ${r} (${HOSTS[$r]}) -> rank ${q} (${HOSTS[$q]} ${dst_ip}) does not leave directly through ${RAILS[$rail]}: ${route_line}" >&2
+          SWITCH_FAIL=1
+        fi
+      done
+    done
+  done
+  [[ "$SWITCH_FAIL" -eq 0 ]] || exit 4
+fi
+
 # 7. Cable-order check: rank r's second port (f1) subnet must match next rank's first port (f0) subnet,
 #    and the route from rank r to next rank's f0 IP must be a direct 1-hop cable route (dev enp1s0f*, no via).
 CABLE_FAIL=0
 LINK_COUNT="$CHECK_RANKS"
 if [[ "$CHECK_RANKS" -eq 2 ]]; then
   LINK_COUNT=1
+fi
+if [[ "$SWITCH_FABRIC" == "1" ]]; then
+  LINK_COUNT=0  # no cable order on a switch; 7a checked the rails
 fi
 for ((r = 0; r < LINK_COUNT; r++)); do
   next=$(( (r + 1) % CHECK_RANKS ))

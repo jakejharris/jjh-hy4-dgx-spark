@@ -4,11 +4,13 @@
 
 # JJH HY4 1.0 for 4x DGX Sparks
 
-A recipe for running Tencent's Hy4 (774B parameters, checkpoint `c10c0de5`) on four DGX Sparks cabled in a ring: quantized to 3.12 bits per weight, served by TensorFold four-way tensor parallel over RoCE.
+A recipe for running Tencent's Hy4 (774B parameters, checkpoint `c10c0de5`) on four DGX Sparks, cabled in a ring or [on one switch](#ring-or-switch): quantized to 3.12 bits per weight, served by TensorFold four-way tensor parallel over RoCE.
+
+**Two ways to connect the Sparks.** The cabled ring is the default, and the speed numbers on this page were measured on it. Four Sparks on one switch work too, with `SWITCH_FABRIC="1"`: see [Ring or switch](#ring-or-switch).
 
 The claims ledger, `card/claims.json`, ties each measured value to the run that produced it.
 
-[Weights](https://huggingface.co/jakejharris/jjh-hy4-exl3) · [What you need](#what-you-need) · [Steps](#steps) · [Limits](#limits) · [Findings](FINDINGS.md) · [Claims ledger](card/claims.json)
+[Weights](https://huggingface.co/jakejharris/jjh-hy4-exl3) · [What you need](#what-you-need) · [Ring or switch](#ring-or-switch) · [Steps](#steps) · [Limits](#limits) · [Findings](FINDINGS.md) · [Claims ledger](card/claims.json)
 
 ## Speed
 
@@ -168,9 +170,34 @@ Served, the full quant reads 300.07 GB of text weights, plus its drafter and, wi
 
 ## What you need
 
-- **Hardware**: four DGX Sparks (GB10, 121.7 GiB unified memory each, no swap), cabled directly in a 200 Gb/s ring with no switch.
+- **Hardware**: four DGX Sparks (GB10, 121.7 GiB unified memory each, no swap), cabled directly in a 200 Gb/s ring with no switch, or each with one 200 Gb/s link to one switch ([Ring or switch](#ring-or-switch)).
 - **Software**: `nvcr.io/nvidia/pytorch:26.07-py3`, whose NCCL 2.30.7 was built with CUDA 13.3 (the serve log prints `NCCL version 2.30.7+cuda13.3`); Zig 0.17.0; CUDA 13.0 at `/usr/local/cuda-13.0`, which `serve/build_release.sh` compiles with; and `tencent/Hy4` at `c10c0de5`.
 - **For images**: the vision folder `vit-bf16/` (2.47 GB) on rank 0 only.
+
+## Ring or switch
+
+Weights, engine and API are the same in both. Only the cabling, a few settings and the preflight check differ.
+
+| | Cabled ring (default) | One switch |
+| --- | --- | --- |
+| Cabling | one cable to each neighbour (ports `f0` and `f1`) | one 200 Gb/s link from each Spark's port `f0` to the switch |
+| Settings | `launch/ring.env` | `launch/ring.env`, plus your copy of `launch/ring.switch.env.example` |
+| `RING_HOSTS` | physical cable order | rank order |
+| Per-layer sums | direct RoCE relay in the launch example | stock NCCL over RoCE; preflight refuses the relay |
+| Preflight checks | cable order, one-hop routes | both rails reach every Spark directly |
+| Measured | the speed numbers on this page | one cluster, 2026-11-24, from per-Spark parts at the 131,072-token window ([results](launch/SWITCH.md#what-was-run)) |
+| Guide | [launch/RING-RDMA.md](launch/RING-RDMA.md) | [launch/SWITCH.md](launch/SWITCH.md) |
+
+On a switch, follow the [steps](#steps) with these changes:
+
+```bash
+cp launch/ring.switch.env.example launch/ring.switch.env   # set MASTER_ADDR; SWITCH_RAILS and NCCL_IB_HCA if yours differ
+cat launch/ring.env launch/ring.switch.env > /tmp/hy4-switch.env
+bash launch/preflight.sh /tmp/hy4-switch.env --probe --ranks 4
+bash launch/launch.sh --env-file launch/ring.env --env-file launch/ring.switch.env
+```
+
+Pass `launch/ring.switch.env` wherever a command below passes `launch/ring.relay.env.example`. The run on a switch had these settings in one file, with per-Spark parts and later vision; the full pack, the lossless trunk and `tools/row_cost_table.sh` were not run there. What else was not run on a switch: [launch/SWITCH.md](launch/SWITCH.md#what-was-not-run).
 
 ## Get the weights
 
@@ -194,13 +221,13 @@ Run these in order. Each step's guide has the details and the expected output.
    python3 -m exllamav3.conversion.convert -i "$MODEL_DIR" -o "$OUT_DIR" -w "$WORK_DIR" -b 3 -hb 16 -mb 16 -cb mul1 --out_scales always -cd "$CAL_DATA" -cr 250 -cc 2048 -rcp /farm/recipe-l20-76.yaml
    ```
 2. **Quantize the trunk** ([quant/README.md](quant/README.md), "Trunk pass"). Writes `trunk-4b/` and `trunk-6b/` beside the base pack without changing it, plus the drafter's 4-bit files. The full quant needs it, and so do drafts in either build. It can trail step 1 layer by layer on a fourth machine.
-3. **Configure the ring.** Copy `launch/ring.env.example` to `launch/ring.env` and set your hosts, cable addresses and paths. Rank order must follow the physical cables, not hostnames ([launch/RING-RDMA.md](launch/RING-RDMA.md)). The stagers, preflight and launcher all read this file.
-4. **Stage the weights** ([launch/STAGING.md](launch/STAGING.md)). Copy finished layers to all four Sparks over the ring cables as they land (with the drafter, since `STAGE_DRAFTER="1"`), then the trunk folders once the trunk pass ends:
+3. **Configure the ring.** Copy `launch/ring.env.example` to `launch/ring.env` and set your hosts, cable addresses and paths. Rank order must follow the physical cables, not hostnames ([launch/RING-RDMA.md](launch/RING-RDMA.md)). On a switch, rank order is yours to choose and one more settings file is needed ([Ring or switch](#ring-or-switch)). The stagers, preflight and launcher all read this file.
+4. **Stage the weights** ([launch/STAGING.md](launch/STAGING.md)). Copy finished layers to all four Sparks over the ring cables as they land (with the drafter, since `STAGE_DRAFTER="1"`), then the trunk folders once the trunk pass ends. The two stagers were not used on a switch; the parts were copied there with `rsync`:
    ```bash
    python3 -u launch/stage_layers.py --env-file launch/ring.env
    python3 launch/stage_trunk.py --env-file launch/ring.env
    ```
-5. **Check the ring:**
+5. **Check the ring** (on a switch, the probe under [Ring or switch](#ring-or-switch)):
    ```bash
    bash launch/preflight.sh launch/ring.env --probe --ranks 4
    ```
@@ -213,7 +240,7 @@ Run these in order. Each step's guide has the details and the expected output.
 
    The build Spark needs this kit and a TensorFold checkout at `2cee7d9`. With no route to GitHub, clone TensorFold and check out `2cee7d9` on a machine that has one, then copy both folders over (`rsync -a` or `scp -r`). `serve/build_release.sh` checks that the checkout is `2cee7d9` with no local changes.
 
-   `SPARK_HOME` is your home folder on the Sparks, as a full path. Set `TENSORFOLD_BIN` to `next-bin/tensorfold-native` and `TF_TP_KERNEL_IMAGE` to `next-bin/tp_mailbox.fatbin` in `launch/ring.env`, full paths. The launcher reads each Spark's binary hash first and stops if one cannot be read or the four differ. The default launch is the full quant at `4b6b` with drafts on, over the direct RoCE relay:
+   `SPARK_HOME` is your home folder on the Sparks, as a full path. Set `TENSORFOLD_BIN` to `next-bin/tensorfold-native` and `TF_TP_KERNEL_IMAGE` to `next-bin/tp_mailbox.fatbin` in `launch/ring.env`, full paths. The launcher reads each Spark's binary hash first and stops if one cannot be read or the four differ. The default launch is the full quant at `4b6b` with drafts on, over the direct RoCE relay (on a switch, use the switch overlay instead):
    ```bash
    bash tools/row_cost_table.sh --env-file launch/ring.env --env-file launch/ring.relay.env.example --oracle "$ORACLE_BIN"
    bash launch/launch.sh --env-file launch/ring.env --env-file launch/ring.relay.env.example
@@ -311,6 +338,7 @@ Know these before you start:
 - **Thinking on images.** With thinking on and no thinking budget, the kit default, two image requests spent their whole token limit thinking and gave no answer. Ask about images with thinking off, as `bench/vision_check.py` does, or set `SERVE_THINKING_BUDGET` ([settings](launch/SETTINGS.md#serve_thinking_budget)). A long coding reply can do the same ([finding 6](FINDINGS.md#6-with-thinking-on-a-long-coding-reply-can-end-before-the-answer-starts)).
 - **A failed image request.** If an image request fails with a memory error, restart the serve: the other three Sparks can keep the earlier image and spoil the next text request ([open items](FINDINGS.md#open-items)).
 - **Clocks.** Every speed number ran with each Spark's graphics clock capped at 2,200 MHz. At stock clocks, one of our Sparks lost power three times under four-Spark load ([open items](FINDINGS.md#open-items)).
+- **Switch mode is new.** It ran on one cluster, with no long run under load, no RigMark and no accuracy check ([launch/SWITCH.md](launch/SWITCH.md#what-was-not-run)).
 
 ## Launch settings
 
@@ -331,6 +359,7 @@ Know these before you start:
 | `TF_HY4_TARGET_HEAD` | off | Packs the output head too. Changes output. |
 | `TF_HY4_HEAD_BF16` | off | Reads the output head from its BF16 weights instead of an FP32 copy. Faster head, but the last bits of the logits change. |
 | `ring.relay.env.example` | used in the launch example | Overlay: a direct RoCE relay in place of NCCL for the per-layer sums. Lossless trunk, no drafts: same tokens, 2.0% faster ([more](launch/SETTINGS.md#relay-overlay)). |
+| `SWITCH_FABRIC`, `SWITCH_RAILS` | `0` (cabled ring), empty | `1` is for four Sparks on one switch: preflight checks two rails instead of the cable order, and refuses the relay. Set by `ring.switch.env.example`; run on one such cluster ([launch/SWITCH.md](launch/SWITCH.md)). |
 | `TF_HY4_ROW_COST_TABLE` | empty (the engine's built-in table) | Verify cost per batch width; sets how many tokens the drafter proposes. Measure yours (step 6). Changes speed, and can flip close calls ([more](launch/SETTINGS.md#tf_hy4_row_cost_table)). |
 | `TF_HY4_DRAFT_MIN_MARGIN` | off | Cuts a round's drafts where the drafter's top-two gap falls under this value, for example `0.85`. Ships off ([measured](card/QUALITY_CARD.md#draft-cutoff), [more](launch/SETTINGS.md#tf_hy4_draft_min_margin)). |
 | `TF_HY4_REPEAT_STABLE` | `1` (on) | With drafts on, the same prompt gives the same tokens. `"0"` turns it off; any value but `0` or `1` is refused ([more](launch/SETTINGS.md#tf_hy4_repeat_stable)). |
@@ -391,7 +420,7 @@ It was ready in 48 s. Against the full-pack boot with the same settings, each Sp
 - `assets/`: the picture at the top of this page.
 - `quant/`: quantization scripts, the frozen 3.00-bit expert recipe, the 4-bit and 6-bit trunk recipes, and the quantizer patch (`quant/patches/0001-hy4-quant.patch`).
 - `serve/`: TensorFold build guide, patch generator and the port patch (`serve/patches/0001-hy4-port.patch`).
-- `launch/`: ring stagers, preflight, RDMA probe, launcher, settings files, the settings guide ([launch/SETTINGS.md](launch/SETTINGS.md)) and the weight manifest (`launch/weights.sha256`, for `sha256sum -c` in the weights folder).
+- `launch/`: ring stagers, preflight, RDMA probe, launcher, settings files, the settings guide ([launch/SETTINGS.md](launch/SETTINGS.md)), the switch guide ([launch/SWITCH.md](launch/SWITCH.md)) with its preflight test (`launch/test_preflight_switch.sh`), and the weight manifest (`launch/weights.sha256`, for `sha256sum -c` in the weights folder).
 - `bench/`: benchmark client, needle test, prompts, the short-prompt first-token timer (`bench/ttft_sweep.py`), the agent-style tool loop (`bench/agent_loop.py`), and the image check (`bench/vision_check.py`, with its three images in `bench/images/`, two of them also as a JPEG and a WebP).
 - `eval/`: the top-1 agreement scorer and its public prefix set; the full-vocabulary BF16 reference panel and router audit, registered for a later run.
 - `card/`: model card, quality card, the claims ledger and the fill map. The pages that quote the ledger (this README, both cards, `FINDINGS.md`, `launch/RING-RDMA.md`, `launch/SETTINGS.md` and `quant/README.md`) are written from their templates in `card/templates/` by `python3 tools/render.py --all`, and `tools/fill_claims.py` rewrites them after each fill. A value not measured yet reads `(pending)`.
@@ -401,7 +430,7 @@ It was ready in 48 s. Against the full-pack boot with the same settings, each Sp
 - `tools/`: kit checks, rendering, filling the ledger from boot outputs (`tools/fill_next.py` for this release's run), per-Spark splitting, the drafter folder for a launch from parts, and the vision folder (`tools/vit_folder.py`).
 - [FINDINGS.md](FINDINGS.md): measured results that hold beyond this pack.
 
-Rank order must match your physical ring cables, which `launch/preflight.sh` checks (`enp1s0f1*` to `enp1s0f0*` on separate `/24` subnets with one-hop routes); it refuses timed runs on `NET/Socket`. The pack carries DFly2 at source precision beside its 4-bit copy. It does not carry the vision tower, which is the separate `vit-bf16/` folder ([What you get](#what-you-get)).
+On a ring, rank order must match your physical cables, which `launch/preflight.sh` checks (`enp1s0f1*` to `enp1s0f0*` on separate `/24` subnets with one-hop routes; with `SWITCH_FABRIC="1"`, the two rails instead); it refuses timed runs on `NET/Socket`. The pack carries DFly2 at source precision beside its 4-bit copy. It does not carry the vision tower, which is the separate `vit-bf16/` folder ([What you get](#what-you-get)).
 
 </details>
 

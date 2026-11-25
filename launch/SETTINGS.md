@@ -120,6 +120,10 @@ JPEG and WebP also need the two image decoders beside the binary: `serve/build_r
 
 Before anything starts, `launch/preflight.sh` checks that folder on rank 0 against `launch/vision.sha256` and refuses a missing file or a wrong hash. `SERVE_VISION_TOKENS` (empty: the engine's default) sets the image-token cap a request may use. Measured: [README](../README.md#what-you-get), `next.vision.*`. The overlay `launch/ring.vision.env.example` sets both lines; the launcher hands preflight its overlays merged, so the check sees them.
 
+## `SWITCH_FABRIC` and `SWITCH_RAILS`
+
+Default `0`: the cabled ring, checked as before. `"1"` is for four Sparks on one switch (`launch/ring.switch.env.example`). `launch/preflight.sh` then checks the two interfaces in `SWITCH_RAILS` (empty: `enp1s0f0np0 enP2p1s0f0np0`) instead of the cable order, and refuses the relay, which takes a ring. It is read by preflight only; NCCL is set by the overlay's own lines. Any value but `0` or `1` is refused, and so is anything but two different interface names. What was run and what was not: [SWITCH.md](SWITCH.md).
+
 ## `GPU_CLOCK_CAP_MHZ` and `ENGINE_COMMIT`
 
 Empty by default, new in this release, receipts only. The launcher sets no clocks and passes neither to the engine. It writes both to `launch_meta.json` in the log folder, with each rank's `tensorfold-native` SHA-256 (read on that Spark before launch), the prefill and vision switches in force, and one graphics-clock snapshot per rank at launch and one at ready. A snapshot is not a memory clock and not a trace over the run. `launch/collect_receipts.py` copies all of it into `summary.json` under `engine`, says "not declared" for a missing commit, and flags ranks whose hashes differ.
