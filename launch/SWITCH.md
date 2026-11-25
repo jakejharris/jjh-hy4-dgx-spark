@@ -59,6 +59,8 @@ The decode and prompt numbers come from a short script of our own with German pr
 - No long run under load. The longest boot so far was up 10 hours, mostly idle.
 - No RigMark, `bench/bench.py`, needle at 128K or accuracy check on the switch. The parts were compared with the full pack (1,181 files, 598,517 tensors, 0 differences); the served tokens were not compared with a ring.
 - No row cost table measured on the switch (`tools/row_cost_table.sh`).
+- The overlays as separate files. The run had the same settings in one `ring.env`.
+- A launch from the full pack, and the lossless trunk.
 - `launch/stage_layers.py` and `launch/stage_trunk.py` were not used; the parts were copied with `rsync`.
 - `NCCL_CROSS_NIC="1"`, other channel counts, one rail only, and more than one request at a time.
 - The switch's own flow control settings (PFC, ECN) were not recorded.
