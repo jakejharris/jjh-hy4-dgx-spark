@@ -1,0 +1,87 @@
+{
+ "tool": "launch/preflight.sh --probe --ranks 4",
+ "date": "2026-11-24",
+ "note": "PROBE_JSON of each rank, host names replaced. One run.",
+ "ranks": [
+  {
+   "rank": 0,
+   "host": "node1",
+   "world": 4,
+   "transport": "IB",
+   "bytes_check": "PASS",
+   "init_ms": 1099.4,
+   "burst_156x_ms": {
+    "n": 20,
+    "p50_ms": 6.362,
+    "p95_ms": 9.171,
+    "max_ms": 9.65
+   },
+   "single_gather_ms": {
+    "n": 200,
+    "p50_ms": 0.055,
+    "p95_ms": 0.461,
+    "max_ms": 0.679
+   }
+  },
+  {
+   "rank": 1,
+   "host": "node2",
+   "world": 4,
+   "transport": "IB",
+   "bytes_check": "PASS",
+   "init_ms": 1131.6,
+   "burst_156x_ms": {
+    "n": 20,
+    "p50_ms": 6.369,
+    "p95_ms": 9.172,
+    "max_ms": 9.645
+   },
+   "single_gather_ms": {
+    "n": 200,
+    "p50_ms": 0.055,
+    "p95_ms": 0.457,
+    "max_ms": 0.643
+   }
+  },
+  {
+   "rank": 2,
+   "host": "node3",
+   "world": 4,
+   "transport": "IB",
+   "bytes_check": "PASS",
+   "init_ms": 1231.9,
+   "burst_156x_ms": {
+    "n": 20,
+    "p50_ms": 6.366,
+    "p95_ms": 9.172,
+    "max_ms": 9.65
+   },
+   "single_gather_ms": {
+    "n": 200,
+    "p50_ms": 0.055,
+    "p95_ms": 0.454,
+    "max_ms": 0.667
+   }
+  },
+  {
+   "rank": 3,
+   "host": "node4",
+   "world": 4,
+   "transport": "IB",
+   "bytes_check": "PASS",
+   "init_ms": 1026.4,
+   "burst_156x_ms": {
+    "n": 20,
+    "p50_ms": 6.365,
+    "p95_ms": 9.176,
+    "max_ms": 9.652
+   },
+   "single_gather_ms": {
+    "n": 200,
+    "p50_ms": 0.055,
+    "p95_ms": 0.445,
+    "max_ms": 0.674
+   }
+  }
+ ]
+}

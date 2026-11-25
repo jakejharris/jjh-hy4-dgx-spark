@@ -331,6 +331,7 @@ Know these before you start:
 | `TF_HY4_TARGET_HEAD` | off | Packs the output head too. Changes output. |
 | `TF_HY4_HEAD_BF16` | off | Reads the output head from its BF16 weights instead of an FP32 copy. Faster head, but the last bits of the logits change. |
 | `ring.relay.env.example` | used in the launch example | Overlay: a direct RoCE relay in place of NCCL for the per-layer sums. Lossless trunk, no drafts: same tokens, 2.0% faster ([more](launch/SETTINGS.md#relay-overlay)). |
+| `SWITCH_FABRIC`, `SWITCH_RAILS` | `0` (cabled ring), empty | `1` is for four Sparks on one switch: preflight checks two rails instead of the cable order, and refuses the relay. Set by `ring.switch.env.example`; run on one such cluster ([launch/SWITCH.md](launch/SWITCH.md)). |
 | `TF_HY4_ROW_COST_TABLE` | empty (the engine's built-in table) | Verify cost per batch width; sets how many tokens the drafter proposes. Measure yours (step 6). Changes speed, and can flip close calls ([more](launch/SETTINGS.md#tf_hy4_row_cost_table)). |
 | `TF_HY4_DRAFT_MIN_MARGIN` | off | Cuts a round's drafts where the drafter's top-two gap falls under this value, for example `0.85`. Ships off ([measured](card/QUALITY_CARD.md#draft-cutoff), [more](launch/SETTINGS.md#tf_hy4_draft_min_margin)). |
 | `TF_HY4_REPEAT_STABLE` | `1` (on) | With drafts on, the same prompt gives the same tokens. `"0"` turns it off; any value but `0` or `1` is refused ([more](launch/SETTINGS.md#tf_hy4_repeat_stable)). |
